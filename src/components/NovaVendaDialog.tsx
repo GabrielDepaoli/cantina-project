@@ -41,7 +41,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
   );
 
   const handleRegistrarCompra = () => {
-    if (!selectedFicha || !compraDesc || !compraValor) return;
+    if (!selectedFicha || !compraValor) return;
 
     if (selectedFicha.status === "inativo") {
       toast({ title: "Ficha inativa", description: "Não é possível registrar vendas em uma ficha inativa.", variant: "destructive" });
@@ -54,13 +54,15 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
       return;
     }
 
+    const descricaoFinal = compraDesc.trim() || "Valor Avulso";
+
     registrarCompra.mutate(
-      { fiadorId: selectedFicha.id, descricao: compraDesc, valor: valorNum },
+      { fiadorId: selectedFicha.id, descricao: descricaoFinal, valor: valorNum },
       {
         onSuccess: () => {
           toast({
             title: "Venda registrada com sucesso!",
-            description: `${compraDesc} - R$ ${valorNum.toFixed(2)} na ficha ${selectedFicha.numero_ficha}`,
+            description: `${descricaoFinal} - R$ ${valorNum.toFixed(2)} na ficha ${selectedFicha.numero_ficha}`,
           });
 
           if (modoRecreio) {
@@ -150,9 +152,9 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto</label>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto (Opcional)</label>
                   <Input
-                    placeholder="Ex: Salgado + Suco"
+                    placeholder='Ex: Salgado + Suco — em branco vira "Valor Avulso"'
                     value={compraDesc}
                     onChange={e => setCompraDesc(e.target.value)}
                     className="h-12"
@@ -172,7 +174,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                 </div>
                 <Button
                   onClick={handleRegistrarCompra}
-                  disabled={!compraDesc || !compraValor || registrarCompra.isPending}
+                  disabled={!compraValor || registrarCompra.isPending}
                   className="w-full h-14 text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {registrarCompra.isPending ? "Registrando..." : "Registrar Venda"}
