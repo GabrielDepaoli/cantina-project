@@ -3,6 +3,10 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 const EMAIL_DOMAIN = "cantina.local";
+// A conta no Supabase exige senha com 6+ caracteres, então "123" (o que a pessoa
+// digita na tela) é convertido pra "123456" (a senha real da conta) aqui dentro.
+const SENHA_EXIBIDA = "123";
+const SENHA_REAL = "123456";
 
 interface AuthContextType {
   user: User | null;
@@ -19,7 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      // LOGIN DESATIVADO TEMPORARIAMENTE PARA DESENVOLVIMENTO (ver ProtectedRoute.tsx).
+      // Sem isso, com a tela de login pulada, o app nunca autentica de verdade e
+      // toda escrita no banco é barrada pela RLS. Loga como admin automaticamente
+      // nos bastidores enquanto o bypass estiver ativo. Para reativar: apague este
+      // bloco junto com o bypass em ProtectedRoute.tsx.
+      if (!data.session) {
+        await signIn("admin", "123");
+        const refreshed = await supabase.auth.getSession();
+        setSession(refreshed.data.session);
+        setLoading(false);
+        return;
+      }
+
       setSession(data.session);
       setLoading(false);
     });
@@ -33,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (usuario: string, senha: string) => {
     const email = `${usuario.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const password = senha === SENHA_EXIBIDA ? SENHA_REAL : senha;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error ? "Usuário ou senha inválidos." : null };
   };
 

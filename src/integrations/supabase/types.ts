@@ -63,6 +63,7 @@ export type Database = {
           id: string
           mes_referencia: string
           total: number
+          valor_pago: number
         }
         Insert: {
           created_at?: string
@@ -71,6 +72,7 @@ export type Database = {
           id?: string
           mes_referencia: string
           total: number
+          valor_pago?: number
         }
         Update: {
           created_at?: string
@@ -79,6 +81,7 @@ export type Database = {
           id?: string
           mes_referencia?: string
           total?: number
+          valor_pago?: number
         }
         Relationships: [
           {
@@ -147,11 +150,52 @@ export type Database = {
         }
         Relationships: []
       }
+      pagamentos: {
+        Row: {
+          created_at: string
+          data: string
+          fiador_id: string
+          id: string
+          observacao: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          fiador_id: string
+          id?: string
+          observacao?: string | null
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          fiador_id?: string
+          id?: string
+          observacao?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_fiador_id_fkey"
+            columns: ["fiador_id"]
+            isOneToOne: false
+            referencedRelation: "fiadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      fechar_mes: {
+        Args: {
+          p_mes_referencia: string
+        }
+        Returns: number
+      }
       registrar_compra: {
         Args: {
           p_descricao: string
@@ -167,6 +211,21 @@ export type Database = {
           fiador_id: string
           id: string
           mes_referencia: string
+          valor: number
+        }
+      }
+      registrar_pagamento: {
+        Args: {
+          p_fiador_id: string
+          p_observacao?: string
+          p_valor: number
+        }
+        Returns: {
+          created_at: string
+          data: string
+          fiador_id: string
+          id: string
+          observacao: string | null
           valor: number
         }
       }

@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFichas, useCreateFicha, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
+import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
+import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 
 type View = "dashboard" | "fichas" | "compra" | "relatorios";
 
@@ -22,10 +24,15 @@ const Index = () => {
   const { data: fichas = [], isLoading } = useFichas();
   const createFicha = useCreateFicha();
   const registrarCompra = useRegistrarCompra();
+  const { data: fechamentos = [] } = useFechamentos();
+  const fecharMes = useFecharMes();
 
-  const [view, setView] = useState<View>("dashboard");
+  const [view, setView] = useState<View>("fichas");
   const [search, setSearch] = useState("");
   const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
+  const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
+  const [detalheOpen, setDetalheOpen] = useState(false);
+  const [fecharMesOpen, setFecharMesOpen] = useState(false);
 
   // Estados para compras
   const [compraDesc, setCompraDesc] = useState("");
@@ -62,6 +69,21 @@ const Index = () => {
     navigate("/login", { replace: true });
   };
 
+  const mesAtualRef = new Date().toISOString().slice(0, 7);
+  const mesAtualNome = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+  const handleFecharMes = () => {
+    fecharMes.mutate(mesAtualRef, {
+      onSuccess: (count) => {
+        toast({ title: "Mês fechado!", description: `${count} ficha(s) processada(s).` });
+        setFecharMesOpen(false);
+      },
+      onError: () => {
+        toast({ title: "Erro", description: "Não foi possível fechar o mês.", variant: "destructive" });
+      },
+    });
+  };
+
   const handleRegistrarCompra = () => {
     if (!selectedFicha || !compraDesc || !compraValor) return;
 
@@ -82,7 +104,7 @@ const Index = () => {
           setCompraDesc("");
           setCompraValor("");
           setSelectedFicha(null);
-          setView("dashboard");
+          setView("fichas");
         },
         onError: () => {
           toast({ title: "Erro ao registrar compra", description: "Tente novamente.", variant: "destructive" });
@@ -195,10 +217,10 @@ const Index = () => {
       <nav className="border-b border-border bg-card">
         <div className="container mx-auto px-4 flex gap-1 overflow-x-auto">
           {[
-            { key: "dashboard" as View, label: "Dashboard", icon: BarChart3 },
             { key: "fichas" as View, label: "Fichas", icon: Users },
             { key: "compra" as View, label: "Nova Compra", icon: Plus },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
+            { key: "dashboard" as View, label: "Controle", icon: BarChart3 },
           ].map(item => (
             <button
               key={item.key}
@@ -465,7 +487,11 @@ const Index = () => {
             </div>
             <div className="space-y-2">
               {filteredFichas.map(f => (
-                <Card key={f.id} className="hover:shadow-sm transition-shadow cursor-pointer">
+                <Card
+                  key={f.id}
+                  className="hover:shadow-sm transition-shadow cursor-pointer"
+                  onClick={() => { setDetalheFicha(f); setDetalheOpen(true); }}
+                >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <span className="font-mono font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg text-lg">#{f.numero_ficha}</span>
@@ -597,22 +623,75 @@ const Index = () => {
               </Card>
               <Card className="cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-6 text-center">
-                  <BarChart3 className="w-12 h-12 text-primary mx-auto mb-3" />
-                  <p className="font-semibold text-foreground">Histórico Mensal</p>
-                  <p className="text-sm text-muted-foreground mt-1">Visualizar meses anteriores</p>
-                </CardContent>
-              </Card>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardContent className="p-6 text-center">
                   <FileText className="w-12 h-12 text-accent mx-auto mb-3" />
                   <p className="font-semibold text-foreground">Exportar Relatório</p>
                   <p className="text-sm text-muted-foreground mt-1">PDF ou Excel</p>
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-base">Fechamento Mensal</CardTitle>
+                <Dialog open={fecharMesOpen} onOpenChange={setFecharMesOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      <BarChart3 className="w-4 h-4 mr-2" /> Fechar Mês Atual
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="capitalize">Fechar {mesAtualNome}?</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                      Isso arquiva as compras em aberto deste mês de todas as fichas ativas, registrando quanto era
+                      devido e quanto já foi pago (via pagamentos avulsos registrados durante o mês). Fichas sem
+                      compras neste mês não são afetadas. O saldo em aberto continua normalmente na ficha.
+                    </p>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="outline" onClick={() => setFecharMesOpen(false)}>Cancelar</Button>
+                      <Button
+                        onClick={handleFecharMes}
+                        disabled={fecharMes.isPending}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        {fecharMes.isPending ? "Fechando..." : "Confirmar"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {fechamentos.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum fechamento registrado ainda.</p>
+                )}
+                {fechamentos.map(f => (
+                  <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {f.ficha ? `#${f.ficha.numero_ficha} — ${f.ficha.nome_aluno}` : "Ficha removida"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{f.mes_referencia}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Devido: R$ {Number(f.total).toFixed(2)}</p>
+                      <p className={`text-sm font-semibold ${Number(f.valor_pago) >= Number(f.total) ? "text-success" : "text-destructive"}`}>
+                        Pago: R$ {Number(f.valor_pago).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </motion.div>
         )}
       </main>
+
+      <FichaDetalheDialog
+        ficha={fichas.find(f => f.id === detalheFicha?.id) ?? detalheFicha}
+        open={detalheOpen}
+        onOpenChange={setDetalheOpen}
+      />
     </div>
   );
 };
