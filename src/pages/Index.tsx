@@ -10,10 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFichas, useCreateFicha, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
+import { useFichas, useCreateFicha, type Ficha } from "@/hooks/useFichas";
 import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
 import { useFaturamentoDia } from "@/hooks/useFaturamento";
+import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
+import NovaVendaDialog from "@/components/NovaVendaDialog";
 import { formatCpf, formatTelefone } from "@/lib/masks";
 import { cantinaConfig } from "@/config/cantina";
 
@@ -26,22 +28,19 @@ const Index = () => {
 
   const { data: fichas = [], isLoading } = useFichas();
   const createFicha = useCreateFicha();
-  const registrarCompra = useRegistrarCompra();
   const { data: fechamentos = [] } = useFechamentos();
   const fecharMes = useFecharMes();
   const { data: faturamentoDia = 0 } = useFaturamentoDia();
+  const { data: vendas = [] } = useVendas();
 
   const [view, setView] = useState<View>("menu");
   const [mostrarFaturamento, setMostrarFaturamento] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
   const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
   const [detalheOpen, setDetalheOpen] = useState(false);
   const [fecharMesOpen, setFecharMesOpen] = useState(false);
-
-  // Estados para compras
-  const [compraDesc, setCompraDesc] = useState("");
-  const [compraValor, setCompraValor] = useState("");
+  const [novaVendaOpen, setNovaVendaOpen] = useState(false);
+  const [novaVendaFichaId, setNovaVendaFichaId] = useState<string | null>(null);
 
   // Estados para Nova Ficha
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,16 +77,26 @@ const Index = () => {
   const mesAtualNome = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
-  const menuAtalhos = [
-    { label: "Realizar uma nova venda", icon: ShoppingCart },
-    { label: "Verificar devedores", icon: AlertCircle, descricao: "Fichas com mais de 1 mês em aberto (em breve)" },
-    { label: "Gerar relatório", icon: FileText },
-    { label: "Cadastrar produto", icon: Package },
-  ];
+  const abrirNovaVenda = (fichaId: string | null = null) => {
+    setNovaVendaFichaId(fichaId);
+    setNovaVendaOpen(true);
+  };
 
   const handleAtalhoMock = (label: string) => {
     toast({ title: label, description: "Essa funcionalidade ainda vai ser desenvolvida." });
   };
+
+  const menuAtalhos = [
+    { label: "Realizar uma nova venda", icon: ShoppingCart, onClick: () => abrirNovaVenda() },
+    {
+      label: "Verificar devedores",
+      icon: AlertCircle,
+      descricao: "Fichas com mais de 1 mês em aberto (em breve)",
+      onClick: () => handleAtalhoMock("Verificar devedores"),
+    },
+    { label: "Gerar relatório", icon: FileText, onClick: () => handleAtalhoMock("Gerar relatório") },
+    { label: "Cadastrar produto", icon: Package, onClick: () => handleAtalhoMock("Cadastrar produto") },
+  ];
 
   const handleFecharMes = () => {
     fecharMes.mutate(mesAtualRef, {
@@ -99,40 +108,6 @@ const Index = () => {
         toast({ title: "Erro", description: "Não foi possível fechar o mês.", variant: "destructive" });
       },
     });
-  };
-
-  const handleRegistrarCompra = () => {
-    if (!selectedFicha || !compraDesc || !compraValor) return;
-
-    if (selectedFicha.status === "inativo") {
-      toast({ title: "Ficha inativa", description: "Não é possível registrar compras em uma ficha inativa.", variant: "destructive" });
-      return;
-    }
-
-    const valorNum = parseFloat(compraValor.replace(",", "."));
-    if (isNaN(valorNum)) {
-      toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
-      return;
-    }
-
-    registrarCompra.mutate(
-      { fiadorId: selectedFicha.id, descricao: compraDesc, valor: valorNum },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Compra registrada com sucesso!",
-            description: `${compraDesc} - R$ ${valorNum.toFixed(2)} na ficha ${selectedFicha.numero_ficha}`,
-          });
-          setCompraDesc("");
-          setCompraValor("");
-          setSelectedFicha(null);
-          setView("fichas");
-        },
-        onError: () => {
-          toast({ title: "Erro ao registrar compra", description: "Tente novamente.", variant: "destructive" });
-        },
-      }
-    );
   };
 
   const handleCriarFicha = () => {
@@ -245,7 +220,7 @@ const Index = () => {
           {[
             { key: "menu" as View, label: "Menu", icon: MenuIcon },
             { key: "fichas" as View, label: "Fichas", icon: Users },
-            { key: "compra" as View, label: "Nova Compra", icon: Plus },
+            { key: "compra" as View, label: "Vendas", icon: Plus },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
             { key: "dashboard" as View, label: "Controle", icon: BarChart3 },
           ].map(item => (
@@ -301,7 +276,7 @@ const Index = () => {
                 <Card
                   key={item.label}
                   className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleAtalhoMock(item.label)}
+                  onClick={item.onClick}
                 >
                   <CardContent className="p-6 text-center">
                     <item.icon className="w-10 h-10 text-primary mx-auto mb-3" />
@@ -340,12 +315,12 @@ const Index = () => {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setView("compra")}>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => abrirNovaVenda()}>
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Ação Rápida</p>
-                      <p className="text-lg font-bold text-primary">+ Nova Compra</p>
+                      <p className="text-lg font-bold text-primary">+ Nova Venda</p>
                     </div>
                     <Plus className="w-10 h-10 text-primary/40" />
                   </div>
@@ -374,7 +349,7 @@ const Index = () => {
                       <div
                         key={f.id}
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => { setSelectedFicha(f); setView("compra"); }}
+                        onClick={() => abrirNovaVenda(f.id)}
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded">#{f.numero_ficha}</span>
@@ -626,99 +601,51 @@ const Index = () => {
           </motion.div>
         )}
 
-        {/* NOVA COMPRA */}
+        {/* VENDAS */}
         {view === "compra" && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto space-y-6">
-            <h2 className="text-xl font-bold text-foreground">Registrar Compra</h2>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-foreground">Vendas</h2>
+              <Button
+                onClick={() => abrirNovaVenda()}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Realizar Nova Venda
+              </Button>
+            </div>
 
-            {!selectedFicha ? (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Selecione a Ficha</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Buscar por número ou nome..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-12" />
-                  </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredFichas.map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setSelectedFicha(f)}
-                        className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-primary/10 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono font-bold text-primary">#{f.numero_ficha}</span>
-                          <span className="font-medium text-foreground">{f.nome_aluno}</span>
-                          {f.status === "inativo" && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
-                          )}
-                        </div>
-                        <span className="text-sm text-muted-foreground">R$ {Number(f.saldo_atual).toFixed(2)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Card className={selectedFicha.status === "inativo" ? "border-destructive/30 bg-destructive/5" : "border-primary/30 bg-primary/5"}>
+            <div className="space-y-2">
+              {vendas.map(v => (
+                <Card
+                  key={v.id}
+                  className="hover:shadow-sm transition-shadow cursor-pointer"
+                  onClick={() => {
+                    const f = fichas.find(x => x.id === v.fiador_id);
+                    if (f) { setDetalheFicha(f); setDetalheOpen(true); }
+                  }}
+                >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Ficha selecionada</p>
-                      <p className="font-bold text-foreground text-lg">#{selectedFicha.numero_ficha} — {selectedFicha.nome_aluno}</p>
-                      <p className="text-sm text-muted-foreground">Saldo atual: <span className="font-bold text-destructive">R$ {Number(selectedFicha.saldo_atual).toFixed(2)}</span></p>
+                      <p className="font-semibold text-foreground">{v.descricao}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {v.ficha ? `#${v.ficha.numero_ficha} — ${v.ficha.nome_aluno}` : "Ficha removida"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(v.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        {" às "}
+                        {new Date(v.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>
+                    <span className="text-lg font-bold text-destructive">R$ {Number(v.valor).toFixed(2)}</span>
                   </CardContent>
                 </Card>
-
-                {selectedFicha.status === "inativo" ? (
-                  <Card className="border-destructive/30">
-                    <CardContent className="p-6 text-center">
-                      <p className="font-semibold text-destructive">Ficha inativa</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Não é possível registrar compras em uma ficha inativa. Reative a ficha para continuar.
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardContent className="p-5 space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto</label>
-                        <Input
-                          placeholder="Ex: Salgado + Suco"
-                          value={compraDesc}
-                          onChange={e => setCompraDesc(e.target.value)}
-                          className="h-12"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1 block">Valor (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0,00"
-                          value={compraValor}
-                          onChange={e => setCompraValor(e.target.value)}
-                          className="h-14 text-2xl font-bold text-center"
-                        />
-                      </div>
-                      <Button
-                        onClick={handleRegistrarCompra}
-                        disabled={!compraDesc || !compraValor || registrarCompra.isPending}
-                        className="w-full h-14 text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        {registrarCompra.isPending ? "Registrando..." : "Registrar Compra"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
+              ))}
+              {vendas.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma venda registrada ainda.
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -811,6 +738,11 @@ const Index = () => {
         ficha={fichas.find(f => f.id === detalheFicha?.id) ?? detalheFicha}
         open={detalheOpen}
         onOpenChange={setDetalheOpen}
+      />
+      <NovaVendaDialog
+        open={novaVendaOpen}
+        onOpenChange={setNovaVendaOpen}
+        initialFichaId={novaVendaFichaId}
       />
     </div>
   );

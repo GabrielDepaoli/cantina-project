@@ -103,6 +103,8 @@ export function useRegistrarCompra() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FICHAS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["vendas"] });
+      queryClient.invalidateQueries({ queryKey: ["faturamento-dia"] });
     },
   });
 }
