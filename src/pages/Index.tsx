@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut } from "lucide-react";
+import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFichas, useCreateFicha, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
+import { useFaturamentoDia } from "@/hooks/useFaturamento";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import { formatCpf, formatTelefone } from "@/lib/masks";
+import { cantinaConfig } from "@/config/cantina";
 
-type View = "dashboard" | "fichas" | "compra" | "relatorios";
+type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
 
 const Index = () => {
   const { toast } = useToast();
@@ -27,8 +29,10 @@ const Index = () => {
   const registrarCompra = useRegistrarCompra();
   const { data: fechamentos = [] } = useFechamentos();
   const fecharMes = useFecharMes();
+  const { data: faturamentoDia = 0 } = useFaturamentoDia();
 
-  const [view, setView] = useState<View>("fichas");
+  const [view, setView] = useState<View>("menu");
+  const [mostrarFaturamento, setMostrarFaturamento] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
   const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
@@ -72,6 +76,18 @@ const Index = () => {
 
   const mesAtualRef = new Date().toISOString().slice(0, 7);
   const mesAtualNome = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+
+  const menuAtalhos = [
+    { label: "Realizar uma nova venda", icon: ShoppingCart },
+    { label: "Verificar devedores", icon: AlertCircle, descricao: "Fichas com mais de 1 mês em aberto (em breve)" },
+    { label: "Gerar relatório", icon: FileText },
+    { label: "Cadastrar produto", icon: Package },
+  ];
+
+  const handleAtalhoMock = (label: string) => {
+    toast({ title: label, description: "Essa funcionalidade ainda vai ser desenvolvida." });
+  };
 
   const handleFecharMes = () => {
     fecharMes.mutate(mesAtualRef, {
@@ -213,8 +229,8 @@ const Index = () => {
               <span className="text-primary-foreground font-bold text-lg">🍽</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Cantina Fiado</h1>
-              <p className="text-xs text-muted-foreground">Gerenciamento de Fichas</p>
+              <h1 className="text-lg font-bold text-foreground">{cantinaConfig.nome}</h1>
+              <p className="text-xs text-muted-foreground">{cantinaConfig.proprietario}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
@@ -227,6 +243,7 @@ const Index = () => {
       <nav className="border-b border-border bg-card">
         <div className="container mx-auto px-4 flex gap-1 overflow-x-auto">
           {[
+            { key: "menu" as View, label: "Menu", icon: MenuIcon },
             { key: "fichas" as View, label: "Fichas", icon: Users },
             { key: "compra" as View, label: "Nova Compra", icon: Plus },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
@@ -248,6 +265,55 @@ const Index = () => {
       </nav>
 
       <main className="container mx-auto px-4 py-6">
+        {/* MENU */}
+        {view === "menu" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
+              <Card className="bg-primary border-none">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-primary-foreground/80">Faturamento do dia</p>
+                      <p className="text-3xl font-bold text-primary-foreground">
+                        {mostrarFaturamento ? `R$ ${faturamentoDia.toFixed(2)}` : "R$ ••••••"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setMostrarFaturamento(v => !v)}
+                      className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                      aria-label={mostrarFaturamento ? "Esconder valor" : "Mostrar valor"}
+                    >
+                      {mostrarFaturamento ? <Eye className="w-6 h-6" /> : <EyeOff className="w-6 h-6" />}
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5 h-full flex flex-col items-center justify-center">
+                  <p className="text-xs text-muted-foreground">Hoje</p>
+                  <p className="text-lg font-bold text-foreground">{dataHoje}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {menuAtalhos.map(item => (
+                <Card
+                  key={item.label}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleAtalhoMock(item.label)}
+                >
+                  <CardContent className="p-6 text-center">
+                    <item.icon className="w-10 h-10 text-primary mx-auto mb-3" />
+                    <p className="font-semibold text-foreground">{item.label}</p>
+                    {item.descricao && <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* DASHBOARD */}
         {view === "dashboard" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
