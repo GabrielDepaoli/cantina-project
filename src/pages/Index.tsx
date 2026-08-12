@@ -66,7 +66,7 @@ const Index = () => {
   const [indepCpf, setIndepCpf] = useState("");
 
   const totalReceber = fichas.reduce((s, f) => s + Number(f.saldo_atual), 0);
-  const fichasAtivas = fichas.filter(f => f.status === "ativo").length;
+  const fichasAtivas = fichas.filter(f => !f.bloqueada).length;
   const topFichas = [...fichas].sort((a, b) => Number(b.saldo_atual) - Number(a.saldo_atual)).slice(0, 3);
 
   const filteredFichas = fichas.filter(f =>
@@ -608,8 +608,8 @@ const Index = () => {
                       <p className={`text-xl font-bold ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
                         {formatSaldo(Number(f.saldo_atual))}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${f.status === "ativo" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                        {f.status === "ativo" ? "Ativo" : "Inativo"}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${!f.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        {!f.bloqueada ? "Ativo" : "Bloqueada"}
                       </span>
                     </div>
                   </CardContent>

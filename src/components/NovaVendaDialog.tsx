@@ -55,11 +55,6 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
       return;
     }
 
-    if (selectedFicha.status === "inativo") {
-      toast({ title: "Ficha inativa", description: "Não é possível registrar vendas em uma ficha inativa.", variant: "destructive" });
-      return;
-    }
-
     const valorNum = parseFloat(compraValor.replace(",", "."));
     if (isNaN(valorNum)) {
       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
@@ -134,9 +129,6 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-primary">#{f.numero_ficha}</span>
                     <span className="font-medium text-foreground">{f.nome_aluno}</span>
-                    {f.status === "inativo" && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
-                    )}
                     {f.bloqueada && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">Bloqueada</span>
                     )}
@@ -152,13 +144,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
         ) : (
           <div className="space-y-4">
             <Card
-              className={
-                selectedFicha.bloqueada
-                  ? "border-warning/30 bg-warning/5"
-                  : selectedFicha.status === "inativo"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-primary/30 bg-primary/5"
-              }
+              className={selectedFicha.bloqueada ? "border-warning/30 bg-warning/5" : "border-primary/30 bg-primary/5"}
             >
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
@@ -181,15 +167,6 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                   <p className="font-semibold text-warning">Conta bloqueada</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Essa conta está trancada e não pode receber vendas. Destranque a conta para continuar.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : selectedFicha.status === "inativo" ? (
-              <Card className="border-destructive/30">
-                <CardContent className="p-6 text-center">
-                  <p className="font-semibold text-destructive">Ficha inativa</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Não é possível registrar vendas em uma ficha inativa. Reative a ficha para continuar.
                   </p>
                 </CardContent>
               </Card>

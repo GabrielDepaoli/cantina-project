@@ -36,7 +36,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const [pagamentoValor, setPagamentoValor] = useState("");
   const [pagamentoObs, setPagamentoObs] = useState("");
 
-  const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmTrancarOpen, setConfirmTrancarOpen] = useState(false);
 
@@ -80,22 +79,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         },
         onError: () => {
           toast({ title: "Erro", description: "Não foi possível salvar as alterações.", variant: "destructive" });
-        },
-      }
-    );
-  };
-
-  const handleToggleStatus = () => {
-    const novoStatus = ficha.status === "ativo" ? "inativo" : "ativo";
-    updateFicha.mutate(
-      { id: ficha.id, status: novoStatus },
-      {
-        onSuccess: () => {
-          toast({ title: novoStatus === "ativo" ? "Ficha ativada!" : "Ficha desativada!" });
-          setConfirmToggleOpen(false);
-        },
-        onError: () => {
-          toast({ title: "Erro", description: "Não foi possível atualizar o status.", variant: "destructive" });
         },
       }
     );
@@ -196,18 +179,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setConfirmToggleOpen(true)}
-                className={
-                  ficha.status === "ativo"
-                    ? "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
-                    : "hover:bg-success/10 hover:text-success hover:border-success/40"
-                }
-              >
-                {ficha.status === "ativo" ? "Desativar Ficha" : "Ativar Ficha"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => setConfirmTrancarOpen(true)}
                 className="hover:bg-warning/10 hover:text-warning hover:border-warning/40"
               >
@@ -301,16 +272,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
               {ficha.resp1_celular && <p>Celular: <span className="text-foreground">{ficha.resp1_celular}</span></p>}
               {ficha.resp2_nome && <p>Responsável 2: <span className="text-foreground">{ficha.resp2_nome}</span></p>}
-              <div className="flex flex-wrap gap-1 mt-1">
-                <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${ficha.status === "ativo" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                  {ficha.status === "ativo" ? "Ativo" : "Inativo"}
-                </span>
-                {ficha.bloqueada && (
-                  <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">
-                    Trancada
-                  </span>
-                )}
-              </div>
+              <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                {!ficha.bloqueada ? "Ativo" : "Bloqueada"}
+              </span>
             </div>
           )}
 
@@ -388,33 +352,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               onClick={handleToggleTrancar}
               disabled={updateFicha.isPending}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
-            >
-              {updateFicha.isPending ? "Salvando..." : "Confirmar"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={confirmToggleOpen} onOpenChange={setConfirmToggleOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{ficha.status === "ativo" ? "Desativar" : "Ativar"} ficha #{ficha.numero_ficha}?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {ficha.status === "ativo"
-              ? "A ficha fica inativa e não poderá mais receber novas compras. Pagamentos continuam permitidos normalmente."
-              : "A ficha volta a ficar ativa e pode receber novas compras normalmente."}
-          </p>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setConfirmToggleOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={handleToggleStatus}
-              disabled={updateFicha.isPending}
-              className={
-                ficha.status === "ativo"
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : "bg-success text-success-foreground hover:bg-success/90"
-              }
             >
               {updateFicha.isPending ? "Salvando..." : "Confirmar"}
             </Button>
