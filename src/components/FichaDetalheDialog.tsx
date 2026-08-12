@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
+import { formatCpf, formatTelefone } from "@/lib/masks";
 
 interface FichaDetalheDialogProps {
   ficha: Ficha | null;
@@ -52,6 +53,11 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   if (!ficha) return null;
 
   const handleSalvarEdicao = () => {
+    if (!resp1Celular.trim()) {
+      toast({ title: "Erro", description: "O celular é obrigatório.", variant: "destructive" });
+      return;
+    }
+
     updateFicha.mutate(
       {
         id: ficha.id,
@@ -133,12 +139,22 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                   <Input value={nomeResponsavel} onChange={e => setNomeResponsavel(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Celular</Label>
-                  <Input value={resp1Celular} onChange={e => setResp1Celular(e.target.value)} placeholder="(00) 00000-0000" />
+                  <Label className="text-xs">Celular (Obrigatório)</Label>
+                  <Input
+                    value={resp1Celular}
+                    onChange={e => setResp1Celular(formatTelefone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">CPF</Label>
-                  <Input value={resp1Cpf} onChange={e => setResp1Cpf(e.target.value)} placeholder="000.000.000-00" />
+                  <Label className="text-xs">CPF (Opcional)</Label>
+                  <Input
+                    value={resp1Cpf}
+                    onChange={e => setResp1Cpf(formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Responsável 2 (Nome)</Label>
@@ -146,11 +162,21 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Responsável 2 (Celular)</Label>
-                  <Input value={resp2Celular} onChange={e => setResp2Celular(e.target.value)} placeholder="(00) 00000-0000" />
+                  <Input
+                    value={resp2Celular}
+                    onChange={e => setResp2Celular(formatTelefone(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Responsável 2 (CPF)</Label>
-                  <Input value={resp2Cpf} onChange={e => setResp2Cpf(e.target.value)} placeholder="000.000.000-00" />
+                  <Input
+                    value={resp2Cpf}
+                    onChange={e => setResp2Cpf(formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
                 </div>
               </div>
               <div className="flex items-center gap-3">

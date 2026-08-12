@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFichas, useCreateFicha, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
+import { formatCpf, formatTelefone } from "@/lib/masks";
 
 type View = "dashboard" | "fichas" | "compra" | "relatorios";
 
@@ -143,13 +144,17 @@ const Index = () => {
     let responsavelNome = "O Próprio";
     if (novaFichaTipo === "dependente") {
       if (!resp1Nome.trim()) {
-        toast({ title: "Erro", description: "Para dependentes, informe os dados do Responsável 1 (Nome requerido).", variant: "destructive" });
+        toast({ title: "Erro", description: "Para dependentes, informe o nome do Responsável 1.", variant: "destructive" });
+        return;
+      }
+      if (!resp1Celular.trim()) {
+        toast({ title: "Erro", description: "Para dependentes, informe o celular do Responsável 1.", variant: "destructive" });
         return;
       }
       responsavelNome = resp1Nome;
     } else {
-      if (!indepCelular.trim() || !indepCpf.trim()) {
-        toast({ title: "Erro", description: "Para independentes, informe o Celular e CPF.", variant: "destructive" });
+      if (!indepCelular.trim()) {
+        toast({ title: "Erro", description: "Para independentes, informe o celular do titular.", variant: "destructive" });
         return;
       }
     }
@@ -426,12 +431,22 @@ const Index = () => {
                               <Input placeholder="Nome Completo" value={resp1Nome} onChange={e => setResp1Nome(e.target.value)} />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Celular</Label>
-                              <Input placeholder="(00) 00000-0000" value={resp1Celular} onChange={e => setResp1Celular(e.target.value)} />
+                              <Label className="text-xs">Celular (Obrigatório)</Label>
+                              <Input
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                                value={resp1Celular}
+                                onChange={e => setResp1Celular(formatTelefone(e.target.value))}
+                              />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">CPF</Label>
-                              <Input placeholder="000.000.000-00" value={resp1Cpf} onChange={e => setResp1Cpf(e.target.value)} />
+                              <Label className="text-xs">CPF (Opcional)</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                maxLength={14}
+                                value={resp1Cpf}
+                                onChange={e => setResp1Cpf(formatCpf(e.target.value))}
+                              />
                             </div>
                           </div>
                         </div>
@@ -445,11 +460,21 @@ const Index = () => {
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Celular</Label>
-                              <Input placeholder="(00) 00000-0000" value={resp2Celular} onChange={e => setResp2Celular(e.target.value)} />
+                              <Input
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                                value={resp2Celular}
+                                onChange={e => setResp2Celular(formatTelefone(e.target.value))}
+                              />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">CPF</Label>
-                              <Input placeholder="000.000.000-00" value={resp2Cpf} onChange={e => setResp2Cpf(e.target.value)} />
+                              <Input
+                                placeholder="000.000.000-00"
+                                maxLength={14}
+                                value={resp2Cpf}
+                                onChange={e => setResp2Cpf(formatCpf(e.target.value))}
+                              />
                             </div>
                           </div>
                         </div>
@@ -460,11 +485,21 @@ const Index = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <Label className="text-xs">Celular (Obrigatório)</Label>
-                            <Input placeholder="(00) 00000-0000" value={indepCelular} onChange={e => setIndepCelular(e.target.value)} />
+                            <Input
+                              placeholder="(00) 00000-0000"
+                              maxLength={15}
+                              value={indepCelular}
+                              onChange={e => setIndepCelular(formatTelefone(e.target.value))}
+                            />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">CPF (Obrigatório)</Label>
-                            <Input placeholder="000.000.000-00" value={indepCpf} onChange={e => setIndepCpf(e.target.value)} />
+                            <Label className="text-xs">CPF (Opcional)</Label>
+                            <Input
+                              placeholder="000.000.000-00"
+                              maxLength={14}
+                              value={indepCpf}
+                              onChange={e => setIndepCpf(formatCpf(e.target.value))}
+                            />
                           </div>
                         </div>
                       </div>
