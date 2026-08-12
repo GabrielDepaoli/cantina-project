@@ -95,6 +95,7 @@ export type Database = {
       }
       fiadores: {
         Row: {
+          bloqueada: boolean
           created_at: string
           id: string
           nome_aluno: string
@@ -107,12 +108,14 @@ export type Database = {
           resp2_cpf: string | null
           resp2_nome: string | null
           saldo_atual: number
+          somente_credito: boolean
           status: string
           telefone: string | null
           tipo: string
           updated_at: string
         }
         Insert: {
+          bloqueada?: boolean
           created_at?: string
           id?: string
           nome_aluno: string
@@ -125,12 +128,14 @@ export type Database = {
           resp2_cpf?: string | null
           resp2_nome?: string | null
           saldo_atual?: number
+          somente_credito?: boolean
           status?: string
           telefone?: string | null
           tipo?: string
           updated_at?: string
         }
         Update: {
+          bloqueada?: boolean
           created_at?: string
           id?: string
           nome_aluno?: string
@@ -143,6 +148,7 @@ export type Database = {
           resp2_cpf?: string | null
           resp2_nome?: string | null
           saldo_atual?: number
+          somente_credito?: boolean
           status?: string
           telefone?: string | null
           tipo?: string

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Minus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Minus, Trash2, Lock, Unlock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
@@ -37,6 +38,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
 
   const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmTrancarOpen, setConfirmTrancarOpen] = useState(false);
 
   useEffect(() => {
     if (!ficha) return;
@@ -94,6 +96,41 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         },
         onError: () => {
           toast({ title: "Erro", description: "Não foi possível atualizar o status.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleToggleTrancar = () => {
+    const novoValor = !ficha.bloqueada;
+    updateFicha.mutate(
+      { id: ficha.id, bloqueada: novoValor },
+      {
+        onSuccess: () => {
+          toast({ title: novoValor ? "Conta trancada!" : "Conta destrancada!" });
+          setConfirmTrancarOpen(false);
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Não foi possível atualizar o bloqueio da conta.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleToggleSomenteCredito = (checked: boolean) => {
+    updateFicha.mutate(
+      { id: ficha.id, somente_credito: checked },
+      {
+        onSuccess: () => {
+          toast({
+            title: checked ? "Somente crédito ativado" : "Somente crédito desativado",
+            description: checked
+              ? "Essa conta só vai poder gastar o crédito já adicionado a ela."
+              : "Essa conta volta a poder ficar devendo (fiado normal).",
+          });
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Não foi possível atualizar essa opção.", variant: "destructive" });
         },
       }
     );
@@ -168,7 +205,28 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               >
                 {ficha.status === "ativo" ? "Desativar Ficha" : "Ativar Ficha"}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmTrancarOpen(true)}
+                className="hover:bg-warning/10 hover:text-warning hover:border-warning/40"
+              >
+                {ficha.bloqueada ? <Unlock className="w-4 h-4 mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
+                {ficha.bloqueada ? "Destrancar Conta" : "Trancar Conta"}
+              </Button>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-1">
+            <Checkbox
+              id="somente-credito"
+              checked={ficha.somente_credito}
+              onCheckedChange={handleToggleSomenteCredito}
+              disabled={updateFicha.isPending}
+            />
+            <Label htmlFor="somente-credito" className="cursor-pointer text-sm text-muted-foreground">
+              Somente crédito adicionado — não permite a conta ficar devendo, só gastar o que já foi pago
+            </Label>
           </div>
 
           {editando ? (
@@ -243,9 +301,16 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
               {ficha.resp1_celular && <p>Celular: <span className="text-foreground">{ficha.resp1_celular}</span></p>}
               {ficha.resp2_nome && <p>Responsável 2: <span className="text-foreground">{ficha.resp2_nome}</span></p>}
-              <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${ficha.status === "ativo" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                {ficha.status === "ativo" ? "Ativo" : "Inativo"}
-              </span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${ficha.status === "ativo" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                  {ficha.status === "ativo" ? "Ativo" : "Inativo"}
+                </span>
+                {ficha.bloqueada && (
+                  <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">
+                    Trancada
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -306,6 +371,29 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           </div>
         </div>
       </DialogContent>
+
+      <Dialog open={confirmTrancarOpen} onOpenChange={setConfirmTrancarOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{ficha.bloqueada ? "Destrancar" : "Trancar"} conta #{ficha.numero_ficha}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {ficha.bloqueada
+              ? "A conta volta a poder receber novas vendas normalmente."
+              : "Nenhuma venda nova vai poder ser registrada nessa conta até você destrancar. Pagamentos continuam permitidos normalmente."}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setConfirmTrancarOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleToggleTrancar}
+              disabled={updateFicha.isPending}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+            >
+              {updateFicha.isPending ? "Salvando..." : "Confirmar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmToggleOpen} onOpenChange={setConfirmToggleOpen}>
         <DialogContent className="sm:max-w-sm">

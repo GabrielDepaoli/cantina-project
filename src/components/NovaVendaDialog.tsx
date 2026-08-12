@@ -40,8 +40,20 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
     f.nome_responsavel.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleSelecionarFicha = (f: Ficha) => {
+    setSelectedFicha(f);
+    if (f.bloqueada) {
+      toast({ title: "Conta bloqueada", description: "Essa conta está trancada e não pode receber vendas.", variant: "destructive" });
+    }
+  };
+
   const handleRegistrarCompra = () => {
     if (!selectedFicha || !compraValor) return;
+
+    if (selectedFicha.bloqueada) {
+      toast({ title: "Conta bloqueada", description: "Essa conta está trancada e não pode receber vendas.", variant: "destructive" });
+      return;
+    }
 
     if (selectedFicha.status === "inativo") {
       toast({ title: "Ficha inativa", description: "Não é possível registrar vendas em uma ficha inativa.", variant: "destructive" });
@@ -52,6 +64,18 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
     if (isNaN(valorNum)) {
       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
       return;
+    }
+
+    if (selectedFicha.somente_credito) {
+      const creditoDisponivel = Math.max(0, -Number(selectedFicha.saldo_atual));
+      if (valorNum > creditoDisponivel) {
+        toast({
+          title: "Crédito insuficiente",
+          description: `Essa conta só pode gastar o crédito já adicionado. Disponível: R$ ${creditoDisponivel.toFixed(2)}.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     const descricaoFinal = compraDesc.trim() || "Valor Avulso";
@@ -104,7 +128,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
               {filteredFichas.map(f => (
                 <button
                   key={f.id}
-                  onClick={() => setSelectedFicha(f)}
+                  onClick={() => handleSelecionarFicha(f)}
                   className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-primary/10 transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
@@ -112,6 +136,9 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                     <span className="font-medium text-foreground">{f.nome_aluno}</span>
                     {f.status === "inativo" && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
+                    )}
+                    {f.bloqueada && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">Bloqueada</span>
                     )}
                   </div>
                   <span className="text-sm text-muted-foreground">{formatSaldo(Number(f.saldo_atual))}</span>
@@ -124,7 +151,15 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
           </div>
         ) : (
           <div className="space-y-4">
-            <Card className={selectedFicha.status === "inativo" ? "border-destructive/30 bg-destructive/5" : "border-primary/30 bg-primary/5"}>
+            <Card
+              className={
+                selectedFicha.bloqueada
+                  ? "border-warning/30 bg-warning/5"
+                  : selectedFicha.status === "inativo"
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-primary/30 bg-primary/5"
+              }
+            >
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Ficha selecionada</p>
@@ -140,7 +175,16 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
               </CardContent>
             </Card>
 
-            {selectedFicha.status === "inativo" ? (
+            {selectedFicha.bloqueada ? (
+              <Card className="border-warning/30">
+                <CardContent className="p-6 text-center">
+                  <p className="font-semibold text-warning">Conta bloqueada</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Essa conta está trancada e não pode receber vendas. Destranque a conta para continuar.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : selectedFicha.status === "inativo" ? (
               <Card className="border-destructive/30">
                 <CardContent className="p-6 text-center">
                   <p className="font-semibold text-destructive">Ficha inativa</p>
@@ -151,6 +195,11 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
               </Card>
             ) : (
               <div className="space-y-4">
+                {selectedFicha.somente_credito && (
+                  <p className="text-xs text-warning -mt-2">
+                    Conta limitada ao crédito já adicionado — disponível: R$ {Math.max(0, -Number(selectedFicha.saldo_atual)).toFixed(2)}
+                  </p>
+                )}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto (Opcional)</label>
                   <Input
