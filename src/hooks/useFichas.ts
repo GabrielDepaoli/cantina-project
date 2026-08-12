@@ -64,6 +64,20 @@ export function useUpdateFicha() {
   });
 }
 
+export function useDeleteFicha() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("fiadores").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FICHAS_QUERY_KEY });
+    },
+  });
+}
+
 interface RegistrarCompraInput {
   fiadorId: string;
   descricao: string;

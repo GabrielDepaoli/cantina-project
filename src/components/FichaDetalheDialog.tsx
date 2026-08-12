@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Minus } from "lucide-react";
+import { Pencil, Plus, Minus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useUpdateFicha, type Ficha } from "@/hooks/useFichas";
+import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
 import { formatCpf, formatTelefone } from "@/lib/masks";
 
@@ -19,6 +18,7 @@ interface FichaDetalheDialogProps {
 const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogProps) => {
   const { toast } = useToast();
   const updateFicha = useUpdateFicha();
+  const deleteFicha = useDeleteFicha();
   const registrarPagamento = useRegistrarPagamento();
   const { data: extrato = [], isLoading: extratoLoading } = useExtrato(ficha?.id);
 
@@ -30,10 +30,12 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const [resp2Nome, setResp2Nome] = useState("");
   const [resp2Celular, setResp2Celular] = useState("");
   const [resp2Cpf, setResp2Cpf] = useState("");
-  const [ativo, setAtivo] = useState(true);
 
   const [pagamentoValor, setPagamentoValor] = useState("");
   const [pagamentoObs, setPagamentoObs] = useState("");
+
+  const [confirmToggleOpen, setConfirmToggleOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!ficha) return;
@@ -45,7 +47,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
     setResp2Nome(ficha.resp2_nome ?? "");
     setResp2Celular(ficha.resp2_celular ?? "");
     setResp2Cpf(ficha.resp2_cpf ?? "");
-    setAtivo(ficha.status === "ativo");
     setPagamentoValor("");
     setPagamentoObs("");
   }, [ficha]);
@@ -68,7 +69,6 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         resp2_nome: resp2Nome || null,
         resp2_celular: resp2Celular || null,
         resp2_cpf: resp2Cpf || null,
-        status: ativo ? "ativo" : "inativo",
       },
       {
         onSuccess: () => {
@@ -80,6 +80,35 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         },
       }
     );
+  };
+
+  const handleToggleStatus = () => {
+    const novoStatus = ficha.status === "ativo" ? "inativo" : "ativo";
+    updateFicha.mutate(
+      { id: ficha.id, status: novoStatus },
+      {
+        onSuccess: () => {
+          toast({ title: novoStatus === "ativo" ? "Ficha ativada!" : "Ficha desativada!" });
+          setConfirmToggleOpen(false);
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Não foi possível atualizar o status.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleExcluirFicha = () => {
+    deleteFicha.mutate(ficha.id, {
+      onSuccess: () => {
+        toast({ title: "Ficha excluída." });
+        setConfirmDeleteOpen(false);
+        onOpenChange(false);
+      },
+      onError: () => {
+        toast({ title: "Erro", description: "Não foi possível excluir a ficha.", variant: "destructive" });
+      },
+    });
   };
 
   const handleRegistrarPagamento = () => {
@@ -122,9 +151,23 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                 R$ {Number(ficha.saldo_atual).toFixed(2)}
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setEditando(e => !e)}>
-              <Pencil className="w-4 h-4 mr-1" /> {editando ? "Cancelar" : "Editar"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditando(e => !e)}>
+                <Pencil className="w-4 h-4 mr-1" /> {editando ? "Cancelar" : "Editar"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmToggleOpen(true)}
+                className={
+                  ficha.status === "ativo"
+                    ? "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
+                    : "hover:bg-success/10 hover:text-success hover:border-success/40"
+                }
+              >
+                {ficha.status === "ativo" ? "Desativar Ficha" : "Ativar Ficha"}
+              </Button>
+            </div>
           </div>
 
           {editando ? (
@@ -179,16 +222,19 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Switch id="ativo" checked={ativo} onCheckedChange={setAtivo} />
-                <Label htmlFor="ativo" className="cursor-pointer">Ficha ativa</Label>
-              </div>
               <Button
                 onClick={handleSalvarEdicao}
                 disabled={updateFicha.isPending}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {updateFicha.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmDeleteOpen(true)}
+                className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4 mr-1" /> Excluir Ficha
               </Button>
             </div>
           ) : (
@@ -259,6 +305,55 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           </div>
         </div>
       </DialogContent>
+
+      <Dialog open={confirmToggleOpen} onOpenChange={setConfirmToggleOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{ficha.status === "ativo" ? "Desativar" : "Ativar"} ficha #{ficha.numero_ficha}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {ficha.status === "ativo"
+              ? "A ficha fica inativa e não poderá mais receber novas compras. Pagamentos continuam permitidos normalmente."
+              : "A ficha volta a ficar ativa e pode receber novas compras normalmente."}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setConfirmToggleOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleToggleStatus}
+              disabled={updateFicha.isPending}
+              className={
+                ficha.status === "ativo"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-success text-success-foreground hover:bg-success/90"
+              }
+            >
+              {updateFicha.isPending ? "Salvando..." : "Confirmar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir ficha #{ficha.numero_ficha}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Isso remove a ficha e todo o histórico de compras e pagamentos dela permanentemente. Essa ação não pode
+            ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleExcluirFicha}
+              disabled={deleteFicha.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteFicha.isPending ? "Excluindo..." : "Confirmar Exclusão"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

@@ -88,6 +88,11 @@ const Index = () => {
   const handleRegistrarCompra = () => {
     if (!selectedFicha || !compraDesc || !compraValor) return;
 
+    if (selectedFicha.status === "inativo") {
+      toast({ title: "Ficha inativa", description: "Não é possível registrar compras em uma ficha inativa.", variant: "destructive" });
+      return;
+    }
+
     const valorNum = parseFloat(compraValor.replace(",", "."));
     if (isNaN(valorNum)) {
       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
@@ -580,6 +585,9 @@ const Index = () => {
                         <div className="flex items-center gap-3">
                           <span className="font-mono font-bold text-primary">#{f.numero_ficha}</span>
                           <span className="font-medium text-foreground">{f.nome_aluno}</span>
+                          {f.status === "inativo" && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
+                          )}
                         </div>
                         <span className="text-sm text-muted-foreground">R$ {Number(f.saldo_atual).toFixed(2)}</span>
                       </button>
@@ -589,7 +597,7 @@ const Index = () => {
               </Card>
             ) : (
               <>
-                <Card className="border-primary/30 bg-primary/5">
+                <Card className={selectedFicha.status === "inativo" ? "border-destructive/30 bg-destructive/5" : "border-primary/30 bg-primary/5"}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Ficha selecionada</p>
@@ -600,38 +608,49 @@ const Index = () => {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="p-5 space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto</label>
-                      <Input
-                        placeholder="Ex: Salgado + Suco"
-                        value={compraDesc}
-                        onChange={e => setCompraDesc(e.target.value)}
-                        className="h-12"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Valor (R$)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        value={compraValor}
-                        onChange={e => setCompraValor(e.target.value)}
-                        className="h-14 text-2xl font-bold text-center"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleRegistrarCompra}
-                      disabled={!compraDesc || !compraValor || registrarCompra.isPending}
-                      className="w-full h-14 text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      {registrarCompra.isPending ? "Registrando..." : "Registrar Compra"}
-                    </Button>
-                  </CardContent>
-                </Card>
+                {selectedFicha.status === "inativo" ? (
+                  <Card className="border-destructive/30">
+                    <CardContent className="p-6 text-center">
+                      <p className="font-semibold text-destructive">Ficha inativa</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Não é possível registrar compras em uma ficha inativa. Reative a ficha para continuar.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-5 space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto</label>
+                        <Input
+                          placeholder="Ex: Salgado + Suco"
+                          value={compraDesc}
+                          onChange={e => setCompraDesc(e.target.value)}
+                          className="h-12"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1 block">Valor (R$)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0,00"
+                          value={compraValor}
+                          onChange={e => setCompraValor(e.target.value)}
+                          className="h-14 text-2xl font-bold text-center"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleRegistrarCompra}
+                        disabled={!compraDesc || !compraValor || registrarCompra.isPending}
+                        className="w-full h-14 text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        {registrarCompra.isPending ? "Registrando..." : "Registrar Compra"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </motion.div>
