@@ -12,9 +12,10 @@ interface NovaVendaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialFichaId?: string | null;
+  modoRecreio?: boolean;
 }
 
-const NovaVendaDialog = ({ open, onOpenChange, initialFichaId }: NovaVendaDialogProps) => {
+const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: NovaVendaDialogProps) => {
   const { toast } = useToast();
   const { data: fichas = [] } = useFichas();
   const registrarCompra = useRegistrarCompra();
@@ -61,7 +62,15 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId }: NovaVendaDialog
             title: "Venda registrada com sucesso!",
             description: `${compraDesc} - R$ ${valorNum.toFixed(2)} na ficha ${selectedFicha.numero_ficha}`,
           });
-          onOpenChange(false);
+
+          if (modoRecreio) {
+            setSearch("");
+            setCompraDesc("");
+            setCompraValor("");
+            setSelectedFicha(null);
+          } else {
+            onOpenChange(false);
+          }
         },
         onError: () => {
           toast({ title: "Erro ao registrar venda", description: "Tente novamente.", variant: "destructive" });

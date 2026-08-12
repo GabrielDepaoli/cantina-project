@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package } from "lucide-react";
@@ -35,13 +35,19 @@ const Index = () => {
   const { data: vendas = [] } = useVendas();
 
   const [view, setView] = useState<View>("menu");
-  const [mostrarFaturamento, setMostrarFaturamento] = useState(true);
+  const [mostrarFaturamento, setMostrarFaturamento] = useState(false);
   const [search, setSearch] = useState("");
   const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
   const [detalheOpen, setDetalheOpen] = useState(false);
   const [fecharMesOpen, setFecharMesOpen] = useState(false);
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
   const [novaVendaFichaId, setNovaVendaFichaId] = useState<string | null>(null);
+  const [vendaModoRecreio, setVendaModoRecreio] = useState(false);
+
+  // Esconde o faturamento sempre que a aba Menu é (re)aberta.
+  useEffect(() => {
+    if (view === "menu") setMostrarFaturamento(false);
+  }, [view]);
 
   // Estados para Nova Ficha
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,6 +88,22 @@ const Index = () => {
     setNovaVendaFichaId(fichaId);
     setNovaVendaOpen(true);
   };
+
+  // Atalho: barra de espaço abre o modal de Nova Venda de qualquer lugar,
+  // exceto enquanto o usuário está digitando ou já tem algum modal aberto.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const target = e.target as HTMLElement;
+      const digitando = ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
+      if (digitando || novaVendaOpen || detalheOpen || isModalOpen || fecharMesOpen) return;
+      e.preventDefault();
+      abrirNovaVenda();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [novaVendaOpen, detalheOpen, isModalOpen, fecharMesOpen]);
 
   const handleAtalhoMock = (label: string) => {
     toast({ title: label, description: "Essa funcionalidade ainda vai ser desenvolvida." });
@@ -605,14 +627,22 @@ const Index = () => {
         {/* VENDAS */}
         {view === "compra" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <h2 className="text-xl font-bold text-foreground">Vendas</h2>
-              <Button
-                onClick={() => abrirNovaVenda()}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Realizar Nova Venda
-              </Button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch id="modo-recreio" checked={vendaModoRecreio} onCheckedChange={setVendaModoRecreio} />
+                  <Label htmlFor="modo-recreio" className="cursor-pointer text-sm text-muted-foreground">
+                    Modo recreio
+                  </Label>
+                </div>
+                <Button
+                  onClick={() => abrirNovaVenda()}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Realizar Nova Venda
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -744,6 +774,7 @@ const Index = () => {
         open={novaVendaOpen}
         onOpenChange={setNovaVendaOpen}
         initialFichaId={novaVendaFichaId}
+        modoRecreio={vendaModoRecreio}
       />
     </div>
   );
