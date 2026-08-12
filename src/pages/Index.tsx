@@ -544,7 +544,7 @@ const Index = () => {
                       <p className={`text-xl font-bold ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
                         R$ {Number(f.saldo_atual).toFixed(2)}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${f.status === "ativo" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${f.status === "ativo" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
                         {f.status === "ativo" ? "Ativo" : "Inativo"}
                       </span>
                     </div>
