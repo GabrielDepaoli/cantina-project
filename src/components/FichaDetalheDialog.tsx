@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
 import { formatCpf, formatTelefone } from "@/lib/masks";
+import { formatSaldo } from "@/lib/saldo";
 
 interface FichaDetalheDialogProps {
   ficha: Ficha | null;
@@ -148,7 +149,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
             <div>
               <p className="text-sm text-muted-foreground">Saldo atual</p>
               <p className={`text-2xl font-bold ${Number(ficha.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                R$ {Number(ficha.saldo_atual).toFixed(2)}
+                {formatSaldo(Number(ficha.saldo_atual))}
               </p>
             </div>
             <div className="flex items-center gap-2">

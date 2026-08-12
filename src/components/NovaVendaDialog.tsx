@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useFichas, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
+import { formatSaldo } from "@/lib/saldo";
 
 interface NovaVendaDialogProps {
   open: boolean;
@@ -102,7 +103,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId }: NovaVendaDialog
                       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">Inativo</span>
                     )}
                   </div>
-                  <span className="text-sm text-muted-foreground">R$ {Number(f.saldo_atual).toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">{formatSaldo(Number(f.saldo_atual))}</span>
                 </button>
               ))}
               {filteredFichas.length === 0 && (
@@ -118,7 +119,10 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId }: NovaVendaDialog
                   <p className="text-sm text-muted-foreground">Ficha selecionada</p>
                   <p className="font-bold text-foreground text-lg">#{selectedFicha.numero_ficha} — {selectedFicha.nome_aluno}</p>
                   <p className="text-sm text-muted-foreground">
-                    Saldo atual: <span className="font-bold text-destructive">R$ {Number(selectedFicha.saldo_atual).toFixed(2)}</span>
+                    Saldo atual:{" "}
+                    <span className={`font-bold ${Number(selectedFicha.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
+                      {formatSaldo(Number(selectedFicha.saldo_atual))}
+                    </span>
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>

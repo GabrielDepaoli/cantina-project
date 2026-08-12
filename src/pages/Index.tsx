@@ -17,6 +17,7 @@ import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
 import { formatCpf, formatTelefone } from "@/lib/masks";
+import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
 
 type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
@@ -359,7 +360,7 @@ const Index = () => {
                           </div>
                         </div>
                         <span className={`font-bold text-lg ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                          R$ {Number(f.saldo_atual).toFixed(2)}
+                          {formatSaldo(Number(f.saldo_atual))}
                         </span>
                       </div>
                     ))}
@@ -384,7 +385,7 @@ const Index = () => {
                         <p className="text-xs text-muted-foreground">Ficha #{f.numero_ficha}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-destructive">R$ {Number(f.saldo_atual).toFixed(2)}</span>
+                    <span className="font-bold text-destructive">{formatSaldo(Number(f.saldo_atual))}</span>
                   </div>
                 ))}
                 {topFichas.length === 0 && <p className="text-center text-muted-foreground py-4">Nenhuma ficha cadastrada ainda.</p>}
@@ -583,7 +584,7 @@ const Index = () => {
                     </div>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                        R$ {Number(f.saldo_atual).toFixed(2)}
+                        {formatSaldo(Number(f.saldo_atual))}
                       </p>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${f.status === "ativo" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
                         {f.status === "ativo" ? "Ativo" : "Inativo"}
