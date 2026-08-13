@@ -101,10 +101,11 @@ export function useRegistrarCompra() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: FICHAS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["vendas"] });
       queryClient.invalidateQueries({ queryKey: ["faturamento-dia"] });
+      queryClient.invalidateQueries({ queryKey: ["extrato", variables.fiadorId] });
     },
   });
 }
