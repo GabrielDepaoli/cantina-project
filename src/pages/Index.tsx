@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package } from "lucide-react";
@@ -68,6 +68,13 @@ const Index = () => {
   const totalReceber = fichas.reduce((s, f) => s + Number(f.saldo_atual), 0);
   const fichasAtivas = fichas.filter(f => !f.bloqueada).length;
   const topFichas = [...fichas].sort((a, b) => Number(b.saldo_atual) - Number(a.saldo_atual)).slice(0, 3);
+
+  const proximoNumeroLivre = useMemo(() => {
+    const numerosUsados = new Set(fichas.map(f => parseInt(f.numero_ficha, 10)));
+    let candidato = 1;
+    while (numerosUsados.has(candidato)) candidato++;
+    return String(candidato).padStart(3, "0");
+  }, [fichas]);
 
   const filteredFichas = fichas.filter(f =>
     f.numero_ficha.includes(search) ||
@@ -466,7 +473,7 @@ const Index = () => {
                         <Label htmlFor="numero">Número da Ficha (3 dígitos)</Label>
                         <Input
                           id="numero"
-                          placeholder="Ex: 001"
+                          placeholder={`Próx Num Livre: ${proximoNumeroLivre}`}
                           maxLength={3}
                           value={novaFichaNumero}
                           onChange={e => setNovaFichaNumero(e.target.value.replace(/\D/g, ''))} // Apenas números

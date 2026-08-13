@@ -177,6 +177,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">#{ficha.numero_ficha}</span>
             {ficha.nome_aluno}
+            <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+              {!ficha.bloqueada ? "Ativo" : "Bloqueada"}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -204,16 +207,31 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-1">
-            <Checkbox
-              id="somente-credito"
-              checked={ficha.somente_credito}
-              onCheckedChange={handleToggleSomenteCredito}
-              disabled={updateFicha.isPending}
-            />
-            <Label htmlFor="somente-credito" className="cursor-pointer text-sm text-muted-foreground">
-              Somente crédito adicionado — não permite a conta ficar devendo, só gastar o que já foi pago
-            </Label>
+          <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="somente-credito"
+                checked={ficha.somente_credito}
+                onCheckedChange={handleToggleSomenteCredito}
+                disabled={updateFicha.isPending}
+                className="h-5 w-5 rounded-none"
+              />
+              <Label htmlFor="somente-credito" className="cursor-pointer text-sm text-muted-foreground">
+                Disponibilizar SOMENTE valor Pré-Pago
+              </Label>
+            </div>
+            <div className="text-sm text-muted-foreground text-right shrink-0">
+              {ficha.tipo === "dependente" && (
+                <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
+              )}
+              {ficha.resp1_celular && <p>Celular: <span className="text-foreground">{ficha.resp1_celular}</span></p>}
+              {ficha.resp2_nome && (
+                <p className="mt-1 pt-1 border-t border-border/60">
+                  Responsável 2: <span className="text-foreground">{ficha.resp2_nome}</span>
+                </p>
+              )}
+              {ficha.resp2_celular && <p>Celular: <span className="text-foreground">{ficha.resp2_celular}</span></p>}
+            </div>
           </div>
 
           {editando ? (
@@ -285,18 +303,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                 <Trash2 className="w-4 h-4 mr-1" /> Excluir Ficha
               </Button>
             </div>
-          ) : (
-            <div className="text-sm space-y-1 text-muted-foreground">
-              {ficha.tipo === "dependente" && (
-                <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
-              )}
-              {ficha.resp1_celular && <p>Celular: <span className="text-foreground">{ficha.resp1_celular}</span></p>}
-              {ficha.resp2_nome && <p>Responsável 2: <span className="text-foreground">{ficha.resp2_nome}</span></p>}
-              <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                {!ficha.bloqueada ? "Ativo" : "Bloqueada"}
-              </span>
-            </div>
-          )}
+          ) : null}
 
           <div className="border border-border p-4 rounded-lg space-y-3">
             <h3 className="font-semibold text-sm">Registrar Pagamento</h3>
