@@ -76,6 +76,8 @@ const Index = () => {
     return String(candidato).padStart(3, "0");
   }, [fichas]);
 
+  const ultimasVendas = vendas.slice(0, 70);
+
   const filteredFichas = fichas.filter(f =>
     f.numero_ficha.includes(search) ||
     f.nome_aluno.toLowerCase().includes(search.toLowerCase()) ||
@@ -320,7 +322,7 @@ const Index = () => {
               <Card>
                 <CardContent className="p-5 h-full flex flex-col items-center justify-center">
                   <p className="text-xs text-muted-foreground">Hoje</p>
-                  <p className="text-lg font-bold text-foreground">{dataHoje}</p>
+                  <p className="text-2xl font-bold text-foreground">{dataHoje}</p>
                 </CardContent>
               </Card>
             </div>
@@ -663,7 +665,7 @@ const Index = () => {
         {view === "compra" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-xl font-bold text-foreground">Vendas</h2>
+              <h2 className="text-xl font-bold text-foreground">Últimas Vendas</h2>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Switch id="modo-recreio" checked={vendaModoRecreio} onCheckedChange={setVendaModoRecreio} />
@@ -681,7 +683,7 @@ const Index = () => {
             </div>
 
             <div className="space-y-2">
-              {vendas.map(v => (
+              {ultimasVendas.map(v => (
                 <Card
                   key={v.id}
                   className="hover:shadow-sm transition-shadow cursor-pointer"
@@ -706,7 +708,7 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ))}
-              {vendas.length === 0 && (
+              {ultimasVendas.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Nenhuma venda registrada ainda.
                 </div>
