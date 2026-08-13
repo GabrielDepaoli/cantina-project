@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
-import { formatCpf, formatTelefone } from "@/lib/masks";
+import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 
 interface FichaDetalheDialogProps {
@@ -58,6 +58,22 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const handleSalvarEdicao = () => {
     if (!resp1Celular.trim()) {
       toast({ title: "Erro", description: "O celular é obrigatório.", variant: "destructive" });
+      return;
+    }
+    if (!isTelefoneValido(resp1Celular)) {
+      toast({ title: "Erro", description: "Celular inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+      return;
+    }
+    if (!isCpfValido(resp1Cpf)) {
+      toast({ title: "Erro", description: "CPF inválido — precisa ter 11 dígitos.", variant: "destructive" });
+      return;
+    }
+    if (!isTelefoneValido(resp2Celular)) {
+      toast({ title: "Erro", description: "Celular do Responsável 2 inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+      return;
+    }
+    if (!isCpfValido(resp2Cpf)) {
+      toast({ title: "Erro", description: "CPF do Responsável 2 inválido — precisa ter 11 dígitos.", variant: "destructive" });
       return;
     }
 
@@ -207,10 +223,12 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                   <Label className="text-xs">Nome do Aluno/Proprietário</Label>
                   <Input value={nomeAluno} onChange={e => setNomeAluno(e.target.value)} />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Nome do Responsável</Label>
-                  <Input value={nomeResponsavel} onChange={e => setNomeResponsavel(e.target.value)} />
-                </div>
+                {ficha.tipo === "dependente" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nome do Responsável</Label>
+                    <Input value={nomeResponsavel} onChange={e => setNomeResponsavel(e.target.value)} />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <Label className="text-xs">Celular (Obrigatório)</Label>
                   <Input
@@ -269,7 +287,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
             </div>
           ) : (
             <div className="text-sm space-y-1 text-muted-foreground">
-              <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
+              {ficha.tipo === "dependente" && (
+                <p>Responsável: <span className="text-foreground font-medium">{ficha.nome_responsavel}</span></p>
+              )}
               {ficha.resp1_celular && <p>Celular: <span className="text-foreground">{ficha.resp1_celular}</span></p>}
               {ficha.resp2_nome && <p>Responsável 2: <span className="text-foreground">{ficha.resp2_nome}</span></p>}
               <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>

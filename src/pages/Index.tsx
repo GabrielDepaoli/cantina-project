@@ -16,7 +16,7 @@ import { useFaturamentoDia } from "@/hooks/useFaturamento";
 import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
-import { formatCpf, formatTelefone } from "@/lib/masks";
+import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
 
@@ -160,7 +160,7 @@ const Index = () => {
       return;
     }
 
-    let responsavelNome = "O Próprio";
+    let responsavelNome = "O Mesmo";
     if (novaFichaTipo === "dependente") {
       if (!resp1Nome.trim()) {
         toast({ title: "Erro", description: "Para dependentes, informe o nome do Responsável 1.", variant: "destructive" });
@@ -170,10 +170,34 @@ const Index = () => {
         toast({ title: "Erro", description: "Para dependentes, informe o celular do Responsável 1.", variant: "destructive" });
         return;
       }
+      if (!isTelefoneValido(resp1Celular)) {
+        toast({ title: "Erro", description: "Celular do Responsável 1 inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(resp1Cpf)) {
+        toast({ title: "Erro", description: "CPF do Responsável 1 inválido — precisa ter 11 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isTelefoneValido(resp2Celular)) {
+        toast({ title: "Erro", description: "Celular do Responsável 2 inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(resp2Cpf)) {
+        toast({ title: "Erro", description: "CPF do Responsável 2 inválido — precisa ter 11 dígitos.", variant: "destructive" });
+        return;
+      }
       responsavelNome = resp1Nome;
     } else {
       if (!indepCelular.trim()) {
         toast({ title: "Erro", description: "Para independentes, informe o celular do titular.", variant: "destructive" });
+        return;
+      }
+      if (!isTelefoneValido(indepCelular)) {
+        toast({ title: "Erro", description: "Celular do titular inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(indepCpf)) {
+        toast({ title: "Erro", description: "CPF do titular inválido — precisa ter 11 dígitos.", variant: "destructive" });
         return;
       }
     }
@@ -378,7 +402,9 @@ const Index = () => {
                           <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded">#{f.numero_ficha}</span>
                           <div>
                             <p className="font-medium text-foreground">{f.nome_aluno}</p>
-                            <p className="text-xs text-muted-foreground">Resp: {f.nome_responsavel}</p>
+                            {f.tipo === "dependente" && (
+                              <p className="text-xs text-muted-foreground">Resp: {f.nome_responsavel}</p>
+                            )}
                           </div>
                         </div>
                         <span className={`font-bold text-lg ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
@@ -601,7 +627,9 @@ const Index = () => {
                       <span className="font-mono font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg text-lg">#{f.numero_ficha}</span>
                       <div>
                         <p className="font-semibold text-foreground">{f.nome_aluno}</p>
-                        <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
+                        {f.tipo === "dependente" && (
+                          <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
