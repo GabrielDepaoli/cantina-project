@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package } from "lucide-react";
+import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,6 +98,11 @@ const Index = () => {
     setNovaVendaOpen(true);
   };
 
+  const abrirCadastrarFicha = () => {
+    setView("fichas");
+    setIsModalOpen(true);
+  };
+
   // Atalho: barra de espaço abre o modal de Nova Venda de qualquer lugar,
   // exceto enquanto o usuário está digitando ou já tem algum modal aberto.
   useEffect(() => {
@@ -120,6 +125,7 @@ const Index = () => {
 
   const menuAtalhos = [
     { label: "Realizar uma nova venda", icon: ShoppingCart, onClick: () => abrirNovaVenda() },
+    { label: "Cadastrar nova ficha", icon: UserPlus, onClick: abrirCadastrarFicha },
     {
       label: "Verificar devedores",
       icon: AlertCircle,
@@ -635,7 +641,17 @@ const Index = () => {
                     <div className="flex items-center gap-4">
                       <span className="font-mono font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg text-lg">#{f.numero_ficha}</span>
                       <div>
-                        <p className="font-semibold text-foreground">{f.nome_aluno}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-foreground">{f.nome_aluno}</p>
+                          {f.observacoes && (
+                            <span
+                              className="flex items-center gap-1 text-xs text-muted-foreground italic truncate max-w-[220px]"
+                              title={f.observacoes}
+                            >
+                              <StickyNote className="w-3 h-3 shrink-0" /> {f.observacoes}
+                            </span>
+                          )}
+                        </div>
                         {f.tipo === "dependente" && (
                           <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
                         )}

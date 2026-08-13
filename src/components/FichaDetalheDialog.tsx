@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Minus, Trash2, Lock, Unlock } from "lucide-react";
+import { Pencil, Plus, Minus, Trash2, Lock, Unlock, StickyNote } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const { data: extrato = [], isLoading: extratoLoading } = useExtrato(ficha?.id);
 
   const [editando, setEditando] = useState(false);
+  const [mostrarAnotacao, setMostrarAnotacao] = useState(false);
   const [nomeAluno, setNomeAluno] = useState("");
   const [nomeResponsavel, setNomeResponsavel] = useState("");
   const [resp1Celular, setResp1Celular] = useState("");
@@ -32,6 +34,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const [resp2Nome, setResp2Nome] = useState("");
   const [resp2Celular, setResp2Celular] = useState("");
   const [resp2Cpf, setResp2Cpf] = useState("");
+  const [anotacao, setAnotacao] = useState("");
 
   const [pagamentoValor, setPagamentoValor] = useState("");
   const [pagamentoObs, setPagamentoObs] = useState("");
@@ -42,6 +45,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   useEffect(() => {
     if (!ficha) return;
     setEditando(false);
+    setMostrarAnotacao(false);
     setNomeAluno(ficha.nome_aluno);
     setNomeResponsavel(ficha.nome_responsavel);
     setResp1Celular(ficha.resp1_celular ?? "");
@@ -49,6 +53,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
     setResp2Nome(ficha.resp2_nome ?? "");
     setResp2Celular(ficha.resp2_celular ?? "");
     setResp2Cpf(ficha.resp2_cpf ?? "");
+    setAnotacao(ficha.observacoes ?? "");
     setPagamentoValor("");
     setPagamentoObs("");
   }, [ficha]);
@@ -135,6 +140,22 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
     );
   };
 
+  const handleSalvarAnotacao = () => {
+    if (anotacao === (ficha.observacoes ?? "")) return;
+    updateFicha.mutate(
+      { id: ficha.id, observacoes: anotacao.trim() || null },
+      {
+        onSuccess: () => {
+          toast({ title: "Anotação salva" });
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Não foi possível salvar a anotação.", variant: "destructive" });
+          setAnotacao(ficha.observacoes ?? "");
+        },
+      }
+    );
+  };
+
   const handleExcluirFicha = () => {
     deleteFicha.mutate(ficha.id, {
       onSuccess: () => {
@@ -204,6 +225,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
                 {ficha.bloqueada ? <Unlock className="w-4 h-4 mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
                 {ficha.bloqueada ? "Destrancar Conta" : "Trancar Conta"}
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setMostrarAnotacao(v => !v)}>
+                <StickyNote className="w-4 h-4 mr-1" /> Anotação
+              </Button>
             </div>
           </div>
 
@@ -233,6 +257,21 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
               {ficha.resp2_celular && <p>Celular: <span className="text-foreground">{ficha.resp2_celular}</span></p>}
             </div>
           </div>
+
+          {mostrarAnotacao && (
+            <div className="space-y-1">
+              <Label htmlFor="anotacao" className="text-xs text-muted-foreground">Anotação</Label>
+              <Textarea
+                id="anotacao"
+                value={anotacao}
+                onChange={e => setAnotacao(e.target.value)}
+                onBlur={handleSalvarAnotacao}
+                placeholder="Ex: alergia a amendoim, só pode comprar salgado assado..."
+                className="min-h-[60px] text-sm resize-none"
+                autoFocus
+              />
+            </div>
+          )}
 
           {editando ? (
             <div className="space-y-4 border border-border p-4 rounded-lg">

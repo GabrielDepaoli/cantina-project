@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, StickyNote } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,11 +126,11 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                   onClick={() => handleSelecionarFicha(f)}
                   className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-primary/10 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-primary">#{f.numero_ficha}</span>
-                    <span className="font-medium text-foreground">{f.nome_aluno}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono font-bold text-primary shrink-0">#{f.numero_ficha}</span>
+                    <span className="font-medium text-foreground shrink-0">{f.nome_aluno}</span>
                     {f.bloqueada && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">Bloqueada</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning shrink-0">Bloqueada</span>
                     )}
                   </div>
                   <span className="text-sm text-muted-foreground">{formatSaldo(Number(f.saldo_atual))}</span>
@@ -156,6 +156,11 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                       {formatSaldo(Number(selectedFicha.saldo_atual))}
                     </span>
                   </p>
+                  {selectedFicha.observacoes && (
+                    <p className="flex items-center gap-1 text-sm text-warning mt-1">
+                      <StickyNote className="w-3.5 h-3.5 shrink-0" /> {selectedFicha.observacoes}
+                    </p>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>
               </CardContent>
