@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Search, StickyNote } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,22 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
     setSelectedFicha(f);
     if (f.bloqueada) {
       toast({ title: "Conta bloqueada", description: "Essa conta está trancada e não pode receber vendas.", variant: "destructive" });
+    }
+  };
+
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+
+    const digitos = search.trim().replace(/\D/g, "");
+    if (!digitos) return;
+
+    const numeroBuscado = digitos.padStart(3, "0");
+    const encontrada = fichas.find(f => f.numero_ficha === numeroBuscado);
+
+    if (encontrada) {
+      handleSelecionarFicha(encontrada);
+    } else {
+      toast({ title: "Ficha não encontrada", description: `Não existe ficha com o número ${numeroBuscado}.`, variant: "destructive" });
     }
   };
 
@@ -115,6 +131,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                 placeholder="Buscar por número ou nome..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 className="pl-9 h-12"
                 autoFocus
               />
@@ -200,7 +217,9 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                     placeholder="0,00"
                     value={compraValor}
                     onChange={e => setCompraValor(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleRegistrarCompra()}
                     className="h-14 text-2xl font-bold text-center"
+                    autoFocus
                   />
                 </div>
                 <Button
