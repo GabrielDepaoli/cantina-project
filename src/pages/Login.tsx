@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { cantinaConfig } from "@/config/cantina";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -42,8 +43,8 @@ const Login = () => {
           <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-2xl">🍽</span>
           </div>
-          <h1 className="text-xl font-bold text-foreground">Cantina Fiado</h1>
-          <p className="text-sm text-muted-foreground">Gerenciamento de Fichas</p>
+          <h1 className="text-xl font-bold text-foreground">{cantinaConfig.nome}</h1>
+          <p className="text-sm text-muted-foreground">{cantinaConfig.proprietario}</p>
         </div>
 
         <Card>

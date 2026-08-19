@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, DollarSign, FileText, BarChart3, LogOut } from "lucide-react";
+import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +10,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFichas, useCreateFicha, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
+import { useFichas, useCreateFicha, type Ficha } from "@/hooks/useFichas";
 import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
+import { useFaturamentoDia } from "@/hooks/useFaturamento";
+import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
+import NovaVendaDialog from "@/components/NovaVendaDialog";
+import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
+import { formatSaldo } from "@/lib/saldo";
+import { cantinaConfig } from "@/config/cantina";
 
-type View = "dashboard" | "fichas" | "compra" | "relatorios";
+type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
 
 const Index = () => {
   const { toast } = useToast();
@@ -23,20 +29,25 @@ const Index = () => {
 
   const { data: fichas = [], isLoading } = useFichas();
   const createFicha = useCreateFicha();
-  const registrarCompra = useRegistrarCompra();
   const { data: fechamentos = [] } = useFechamentos();
   const fecharMes = useFecharMes();
+  const { data: faturamentoDia = 0 } = useFaturamentoDia();
+  const { data: vendas = [] } = useVendas();
 
-  const [view, setView] = useState<View>("fichas");
+  const [view, setView] = useState<View>("menu");
+  const [mostrarFaturamento, setMostrarFaturamento] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
   const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
   const [detalheOpen, setDetalheOpen] = useState(false);
   const [fecharMesOpen, setFecharMesOpen] = useState(false);
+  const [novaVendaOpen, setNovaVendaOpen] = useState(false);
+  const [novaVendaFichaId, setNovaVendaFichaId] = useState<string | null>(null);
+  const [vendaModoRecreio, setVendaModoRecreio] = useState(false);
 
-  // Estados para compras
-  const [compraDesc, setCompraDesc] = useState("");
-  const [compraValor, setCompraValor] = useState("");
+  // Esconde o faturamento sempre que a aba Menu é (re)aberta.
+  useEffect(() => {
+    if (view === "menu") setMostrarFaturamento(false);
+  }, [view]);
 
   // Estados para Nova Ficha
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,8 +66,17 @@ const Index = () => {
   const [indepCpf, setIndepCpf] = useState("");
 
   const totalReceber = fichas.reduce((s, f) => s + Number(f.saldo_atual), 0);
-  const fichasAtivas = fichas.filter(f => f.status === "ativo").length;
+  const fichasAtivas = fichas.filter(f => !f.bloqueada).length;
   const topFichas = [...fichas].sort((a, b) => Number(b.saldo_atual) - Number(a.saldo_atual)).slice(0, 3);
+
+  const proximoNumeroLivre = useMemo(() => {
+    const numerosUsados = new Set(fichas.map(f => parseInt(f.numero_ficha, 10)));
+    let candidato = 1;
+    while (numerosUsados.has(candidato)) candidato++;
+    return String(candidato).padStart(3, "0");
+  }, [fichas]);
+
+  const ultimasVendas = vendas.slice(0, 70);
 
   const filteredFichas = fichas.filter(f =>
     f.numero_ficha.includes(search) ||
@@ -71,6 +91,50 @@ const Index = () => {
 
   const mesAtualRef = new Date().toISOString().slice(0, 7);
   const mesAtualNome = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+
+  const abrirNovaVenda = (fichaId: string | null = null) => {
+    setNovaVendaFichaId(fichaId);
+    setNovaVendaOpen(true);
+  };
+
+  const abrirCadastrarFicha = () => {
+    setView("fichas");
+    setIsModalOpen(true);
+  };
+
+  // Atalho: barra de espaço abre o modal de Nova Venda de qualquer lugar,
+  // exceto enquanto o usuário está digitando ou já tem algum modal aberto.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const target = e.target as HTMLElement;
+      const digitando = ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
+      if (digitando || novaVendaOpen || detalheOpen || isModalOpen || fecharMesOpen) return;
+      e.preventDefault();
+      abrirNovaVenda();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [novaVendaOpen, detalheOpen, isModalOpen, fecharMesOpen]);
+
+  const handleAtalhoMock = (label: string) => {
+    toast({ title: label, description: "Essa funcionalidade ainda vai ser desenvolvida." });
+  };
+
+  const menuAtalhos = [
+    { label: "Realizar uma nova venda", icon: ShoppingCart, onClick: () => abrirNovaVenda() },
+    { label: "Cadastrar nova ficha", icon: UserPlus, onClick: abrirCadastrarFicha },
+    {
+      label: "Verificar devedores",
+      icon: AlertCircle,
+      descricao: "Fichas com mais de 1 mês em aberto (em breve)",
+      onClick: () => handleAtalhoMock("Verificar devedores"),
+    },
+    { label: "Gerar relatório", icon: FileText, onClick: () => handleAtalhoMock("Gerar relatório") },
+    { label: "Cadastrar produto", icon: Package, onClick: () => handleAtalhoMock("Cadastrar produto") },
+  ];
 
   const handleFecharMes = () => {
     fecharMes.mutate(mesAtualRef, {
@@ -82,35 +146,6 @@ const Index = () => {
         toast({ title: "Erro", description: "Não foi possível fechar o mês.", variant: "destructive" });
       },
     });
-  };
-
-  const handleRegistrarCompra = () => {
-    if (!selectedFicha || !compraDesc || !compraValor) return;
-
-    const valorNum = parseFloat(compraValor.replace(",", "."));
-    if (isNaN(valorNum)) {
-      toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
-      return;
-    }
-
-    registrarCompra.mutate(
-      { fiadorId: selectedFicha.id, descricao: compraDesc, valor: valorNum },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Compra registrada com sucesso!",
-            description: `${compraDesc} - R$ ${valorNum.toFixed(2)} na ficha ${selectedFicha.numero_ficha}`,
-          });
-          setCompraDesc("");
-          setCompraValor("");
-          setSelectedFicha(null);
-          setView("fichas");
-        },
-        onError: () => {
-          toast({ title: "Erro ao registrar compra", description: "Tente novamente.", variant: "destructive" });
-        },
-      }
-    );
   };
 
   const handleCriarFicha = () => {
@@ -140,16 +175,44 @@ const Index = () => {
       return;
     }
 
-    let responsavelNome = "O Próprio";
+    let responsavelNome = "O Mesmo";
     if (novaFichaTipo === "dependente") {
       if (!resp1Nome.trim()) {
-        toast({ title: "Erro", description: "Para dependentes, informe os dados do Responsável 1 (Nome requerido).", variant: "destructive" });
+        toast({ title: "Erro", description: "Para dependentes, informe o nome do Responsável 1.", variant: "destructive" });
+        return;
+      }
+      if (!resp1Celular.trim()) {
+        toast({ title: "Erro", description: "Para dependentes, informe o celular do Responsável 1.", variant: "destructive" });
+        return;
+      }
+      if (!isTelefoneValido(resp1Celular)) {
+        toast({ title: "Erro", description: "Celular do Responsável 1 inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(resp1Cpf)) {
+        toast({ title: "Erro", description: "CPF do Responsável 1 inválido — precisa ter 11 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isTelefoneValido(resp2Celular)) {
+        toast({ title: "Erro", description: "Celular do Responsável 2 inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(resp2Cpf)) {
+        toast({ title: "Erro", description: "CPF do Responsável 2 inválido — precisa ter 11 dígitos.", variant: "destructive" });
         return;
       }
       responsavelNome = resp1Nome;
     } else {
-      if (!indepCelular.trim() || !indepCpf.trim()) {
-        toast({ title: "Erro", description: "Para independentes, informe o Celular e CPF.", variant: "destructive" });
+      if (!indepCelular.trim()) {
+        toast({ title: "Erro", description: "Para independentes, informe o celular do titular.", variant: "destructive" });
+        return;
+      }
+      if (!isTelefoneValido(indepCelular)) {
+        toast({ title: "Erro", description: "Celular do titular inválido — informe DDD + 8 ou 9 dígitos.", variant: "destructive" });
+        return;
+      }
+      if (!isCpfValido(indepCpf)) {
+        toast({ title: "Erro", description: "CPF do titular inválido — precisa ter 11 dígitos.", variant: "destructive" });
         return;
       }
     }
@@ -203,8 +266,8 @@ const Index = () => {
               <span className="text-primary-foreground font-bold text-lg">🍽</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Cantina Fiado</h1>
-              <p className="text-xs text-muted-foreground">Gerenciamento de Fichas</p>
+              <h1 className="text-lg font-bold text-foreground">{cantinaConfig.nome}</h1>
+              <p className="text-xs text-muted-foreground">{cantinaConfig.proprietario}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
@@ -217,8 +280,9 @@ const Index = () => {
       <nav className="border-b border-border bg-card">
         <div className="container mx-auto px-4 flex gap-1 overflow-x-auto">
           {[
+            { key: "menu" as View, label: "Menu", icon: MenuIcon },
             { key: "fichas" as View, label: "Fichas", icon: Users },
-            { key: "compra" as View, label: "Nova Compra", icon: Plus },
+            { key: "compra" as View, label: "Vendas", icon: Plus },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
             { key: "dashboard" as View, label: "Controle", icon: BarChart3 },
           ].map(item => (
@@ -238,6 +302,55 @@ const Index = () => {
       </nav>
 
       <main className="container mx-auto px-4 py-6">
+        {/* MENU */}
+        {view === "menu" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
+              <Card className="bg-primary border-none">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-primary-foreground/80">Faturamento do dia</p>
+                      <p className="text-3xl font-bold text-primary-foreground">
+                        {mostrarFaturamento ? `R$ ${faturamentoDia.toFixed(2)}` : "R$ ••••••"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setMostrarFaturamento(v => !v)}
+                      className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                      aria-label={mostrarFaturamento ? "Esconder valor" : "Mostrar valor"}
+                    >
+                      {mostrarFaturamento ? <Eye className="w-6 h-6" /> : <EyeOff className="w-6 h-6" />}
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5 h-full flex flex-col items-center justify-center">
+                  <p className="text-xs text-muted-foreground">Hoje</p>
+                  <p className="text-2xl font-bold text-foreground">{dataHoje}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {menuAtalhos.map(item => (
+                <Card
+                  key={item.label}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={item.onClick}
+                >
+                  <CardContent className="p-6 text-center">
+                    <item.icon className="w-10 h-10 text-primary mx-auto mb-3" />
+                    <p className="font-semibold text-foreground">{item.label}</p>
+                    {item.descricao && <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* DASHBOARD */}
         {view === "dashboard" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -264,12 +377,12 @@ const Index = () => {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setView("compra")}>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => abrirNovaVenda()}>
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Ação Rápida</p>
-                      <p className="text-lg font-bold text-primary">+ Nova Compra</p>
+                      <p className="text-lg font-bold text-primary">+ Nova Venda</p>
                     </div>
                     <Plus className="w-10 h-10 text-primary/40" />
                   </div>
@@ -298,17 +411,19 @@ const Index = () => {
                       <div
                         key={f.id}
                         className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => { setSelectedFicha(f); setView("compra"); }}
+                        onClick={() => abrirNovaVenda(f.id)}
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-1 rounded">#{f.numero_ficha}</span>
                           <div>
                             <p className="font-medium text-foreground">{f.nome_aluno}</p>
-                            <p className="text-xs text-muted-foreground">Resp: {f.nome_responsavel}</p>
+                            {f.tipo === "dependente" && (
+                              <p className="text-xs text-muted-foreground">Resp: {f.nome_responsavel}</p>
+                            )}
                           </div>
                         </div>
                         <span className={`font-bold text-lg ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                          R$ {Number(f.saldo_atual).toFixed(2)}
+                          {formatSaldo(Number(f.saldo_atual))}
                         </span>
                       </div>
                     ))}
@@ -333,7 +448,7 @@ const Index = () => {
                         <p className="text-xs text-muted-foreground">Ficha #{f.numero_ficha}</p>
                       </div>
                     </div>
-                    <span className="font-bold text-destructive">R$ {Number(f.saldo_atual).toFixed(2)}</span>
+                    <span className="font-bold text-destructive">{formatSaldo(Number(f.saldo_atual))}</span>
                   </div>
                 ))}
                 {topFichas.length === 0 && <p className="text-center text-muted-foreground py-4">Nenhuma ficha cadastrada ainda.</p>}
@@ -366,7 +481,7 @@ const Index = () => {
                         <Label htmlFor="numero">Número da Ficha (3 dígitos)</Label>
                         <Input
                           id="numero"
-                          placeholder="Ex: 001"
+                          placeholder={`Próx Num Livre: ${proximoNumeroLivre}`}
                           maxLength={3}
                           value={novaFichaNumero}
                           onChange={e => setNovaFichaNumero(e.target.value.replace(/\D/g, ''))} // Apenas números
@@ -426,12 +541,22 @@ const Index = () => {
                               <Input placeholder="Nome Completo" value={resp1Nome} onChange={e => setResp1Nome(e.target.value)} />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Celular</Label>
-                              <Input placeholder="(00) 00000-0000" value={resp1Celular} onChange={e => setResp1Celular(e.target.value)} />
+                              <Label className="text-xs">Celular (Obrigatório)</Label>
+                              <Input
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                                value={resp1Celular}
+                                onChange={e => setResp1Celular(formatTelefone(e.target.value))}
+                              />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">CPF</Label>
-                              <Input placeholder="000.000.000-00" value={resp1Cpf} onChange={e => setResp1Cpf(e.target.value)} />
+                              <Label className="text-xs">CPF (Opcional)</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                maxLength={14}
+                                value={resp1Cpf}
+                                onChange={e => setResp1Cpf(formatCpf(e.target.value))}
+                              />
                             </div>
                           </div>
                         </div>
@@ -445,11 +570,21 @@ const Index = () => {
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Celular</Label>
-                              <Input placeholder="(00) 00000-0000" value={resp2Celular} onChange={e => setResp2Celular(e.target.value)} />
+                              <Input
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                                value={resp2Celular}
+                                onChange={e => setResp2Celular(formatTelefone(e.target.value))}
+                              />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">CPF</Label>
-                              <Input placeholder="000.000.000-00" value={resp2Cpf} onChange={e => setResp2Cpf(e.target.value)} />
+                              <Input
+                                placeholder="000.000.000-00"
+                                maxLength={14}
+                                value={resp2Cpf}
+                                onChange={e => setResp2Cpf(formatCpf(e.target.value))}
+                              />
                             </div>
                           </div>
                         </div>
@@ -460,11 +595,21 @@ const Index = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <Label className="text-xs">Celular (Obrigatório)</Label>
-                            <Input placeholder="(00) 00000-0000" value={indepCelular} onChange={e => setIndepCelular(e.target.value)} />
+                            <Input
+                              placeholder="(00) 00000-0000"
+                              maxLength={15}
+                              value={indepCelular}
+                              onChange={e => setIndepCelular(formatTelefone(e.target.value))}
+                            />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">CPF (Obrigatório)</Label>
-                            <Input placeholder="000.000.000-00" value={indepCpf} onChange={e => setIndepCpf(e.target.value)} />
+                            <Label className="text-xs">CPF (Opcional)</Label>
+                            <Input
+                              placeholder="000.000.000-00"
+                              maxLength={14}
+                              value={indepCpf}
+                              onChange={e => setIndepCpf(formatCpf(e.target.value))}
+                            />
                           </div>
                         </div>
                       </div>
@@ -496,16 +641,28 @@ const Index = () => {
                     <div className="flex items-center gap-4">
                       <span className="font-mono font-bold text-primary bg-primary/10 px-3 py-2 rounded-lg text-lg">#{f.numero_ficha}</span>
                       <div>
-                        <p className="font-semibold text-foreground">{f.nome_aluno}</p>
-                        <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-foreground">{f.nome_aluno}</p>
+                          {f.observacoes && (
+                            <span
+                              className="flex items-center gap-1 text-xs text-muted-foreground italic truncate max-w-[220px]"
+                              title={f.observacoes}
+                            >
+                              <StickyNote className="w-3 h-3 shrink-0" /> {f.observacoes}
+                            </span>
+                          )}
+                        </div>
+                        {f.tipo === "dependente" && (
+                          <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                        R$ {Number(f.saldo_atual).toFixed(2)}
+                        {formatSaldo(Number(f.saldo_atual))}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${f.status === "ativo" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                        {f.status === "ativo" ? "Ativo" : "Inativo"}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${!f.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                        {!f.bloqueada ? "Ativo" : "Bloqueada"}
                       </span>
                     </div>
                   </CardContent>
@@ -520,85 +677,59 @@ const Index = () => {
           </motion.div>
         )}
 
-        {/* NOVA COMPRA */}
+        {/* VENDAS */}
         {view === "compra" && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-lg mx-auto space-y-6">
-            <h2 className="text-xl font-bold text-foreground">Registrar Compra</h2>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="text-xl font-bold text-foreground">Últimas Vendas</h2>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch id="modo-recreio" checked={vendaModoRecreio} onCheckedChange={setVendaModoRecreio} />
+                  <Label htmlFor="modo-recreio" className="cursor-pointer text-sm text-muted-foreground">
+                    Modo recreio
+                  </Label>
+                </div>
+                <Button
+                  onClick={() => abrirNovaVenda()}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Realizar Nova Venda
+                </Button>
+              </div>
+            </div>
 
-            {!selectedFicha ? (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Selecione a Ficha</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Buscar por número ou nome..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-12" />
-                  </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {filteredFichas.map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setSelectedFicha(f)}
-                        className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-primary/10 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono font-bold text-primary">#{f.numero_ficha}</span>
-                          <span className="font-medium text-foreground">{f.nome_aluno}</span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">R$ {Number(f.saldo_atual).toFixed(2)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Card className="border-primary/30 bg-primary/5">
+            <div className="space-y-2">
+              {ultimasVendas.map(v => (
+                <Card
+                  key={v.id}
+                  className="hover:shadow-sm transition-shadow cursor-pointer"
+                  onClick={() => {
+                    const f = fichas.find(x => x.id === v.fiador_id);
+                    if (f) { setDetalheFicha(f); setDetalheOpen(true); }
+                  }}
+                >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Ficha selecionada</p>
-                      <p className="font-bold text-foreground text-lg">#{selectedFicha.numero_ficha} — {selectedFicha.nome_aluno}</p>
-                      <p className="text-sm text-muted-foreground">Saldo atual: <span className="font-bold text-destructive">R$ {Number(selectedFicha.saldo_atual).toFixed(2)}</span></p>
+                      <p className="font-semibold text-foreground">{v.descricao}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {v.ficha ? `#${v.ficha.numero_ficha} — ${v.ficha.nome_aluno}` : "Ficha removida"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(v.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        {" às "}
+                        {new Date(v.data).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>
+                    <span className="text-lg font-bold text-destructive">R$ {Number(v.valor).toFixed(2)}</span>
                   </CardContent>
                 </Card>
-
-                <Card>
-                  <CardContent className="p-5 space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Descrição do Produto</label>
-                      <Input
-                        placeholder="Ex: Salgado + Suco"
-                        value={compraDesc}
-                        onChange={e => setCompraDesc(e.target.value)}
-                        className="h-12"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Valor (R$)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0,00"
-                        value={compraValor}
-                        onChange={e => setCompraValor(e.target.value)}
-                        className="h-14 text-2xl font-bold text-center"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleRegistrarCompra}
-                      disabled={!compraDesc || !compraValor || registrarCompra.isPending}
-                      className="w-full h-14 text-lg font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      {registrarCompra.isPending ? "Registrando..." : "Registrar Compra"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </>
-            )}
+              ))}
+              {ultimasVendas.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma venda registrada ainda.
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -691,6 +822,12 @@ const Index = () => {
         ficha={fichas.find(f => f.id === detalheFicha?.id) ?? detalheFicha}
         open={detalheOpen}
         onOpenChange={setDetalheOpen}
+      />
+      <NovaVendaDialog
+        open={novaVendaOpen}
+        onOpenChange={setNovaVendaOpen}
+        initialFichaId={novaVendaFichaId}
+        modoRecreio={vendaModoRecreio}
       />
     </div>
   );

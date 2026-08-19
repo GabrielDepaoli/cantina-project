@@ -202,3 +202,17 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.fechar_mes(TEXT) TO authenticated;
+
+-- ============================================================
+-- 4) Permitir excluir compras (corrigir lançamentos errados)
+-- ============================================================
+
+CREATE POLICY "Authenticated users can delete compras" ON public.compras FOR DELETE TO authenticated USING (true);
+
+-- ============================================================
+-- 5) Trancar conta e modo "somente crédito adicionado"
+-- ============================================================
+
+ALTER TABLE public.fiadores
+  ADD COLUMN bloqueada BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN somente_credito BOOLEAN NOT NULL DEFAULT false;
