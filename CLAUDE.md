@@ -19,6 +19,27 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - Testes (Vitest, `npx vitest run`): `src/config/ambiente.test.ts` cobre a validação do ambiente. Fora isso, só há o placeholder `src/test/example.test.ts`. O resto do app não tem cobertura.
 - O projeto nasceu no Lovable. Não sobrou branding dele, só restos de scaffold: `NavLink.tsx` e `App.css` sem uso.
 
+## Produção: é ESTA máquina, com `npm run dev`
+
+- **Não existe hospedagem, build nem deploy.** O caixa da cantina roda `npm run dev` **nesta pasta, neste computador**, na porta 8080, lendo o `.env` local.
+  - "Ir para produção" significa **fazer `git checkout` nesta máquina e reiniciar o `npm run dev`**.
+  - O que estiver checado out nesta pasta (branch ou commit) é o que o caixa roda.
+- **Atualizar a produção** (fora do expediente):
+  1. `git rev-parse HEAD` → anote o hash. É o ponto de retorno.
+  2. Pare o servidor com Ctrl+C.
+  3. `git checkout <branch ou commit>`.
+  4. `npm run dev`.
+  5. Confira no navegador a etiqueta "Produção" e as fichas carregando.
+  - Se `package.json` ou `package-lock.json` mudaram, rode `npm install` antes do passo 4.
+- **Voltar atrás:**
+  1. Ctrl+C.
+  2. `git checkout <hash anotado>`.
+  3. `npm run dev`.
+  4. F5 no navegador.
+- **⚠️ HMR: com o `npm run dev` do caixa rodando, tudo o que muda nesta pasta vai para o caixa NA HORA.** Isso inclui arquivo salvo, `git checkout`, `git stash` e alteração no `.env`, que faz o Vite reiniciar sozinho. **Não edite arquivos nem troque de branch nesta pasta durante o expediente.**
+- `npm run dev:staging` na mesma pasta: se o caixa estiver na 8080, o Vite usa a próxima porta livre. Mesmo assim, ele **lê os mesmos arquivos de código** que o caixa.
+- **Rede:** `vite.config.ts` usa `host: "::"`, então o caixa fica acessível pelos IPs desta máquina (rede local, hotspot e VPN), não só por `localhost`. Ver dívida técnica.
+
 ## Convenções inegociáveis
 
 - **Sinal do saldo:** `saldo_atual` **POSITIVO no banco = DÍVIDA; NEGATIVO = CRÉDITO.** A exibição inverte isso em `src/lib/saldo.ts` (`formatSaldo`): uma dívida aparece como `-R$ X.XX` e um crédito como `R$ X.XX (CRÉDITO)`. Nunca confunda os dois sinais, nem em SQL, nem em cálculo, nem em UI.
@@ -61,7 +82,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 - `src/App.tsx`: rotas `/login`, `/` (Index, dentro do `ProtectedRoute`) e `*`.
 - `src/pages/Login.tsx`: o usuário digitado vira `<usuario>@cantina.local`, com senha do Supabase Auth.
-- `src/contexts/AuthContext.tsx` + `src/components/ProtectedRoute.tsx`: o **login está desligado**. O `ProtectedRoute` retorna `children` antes de qualquer checagem, e o `AuthContext` faz login automático com `VITE_DEV_ADMIN_*` sempre que não há sessão. Isso **não** depende de `import.meta.env.DEV`: vale para qualquer build gerado com essas variáveis.
+- `src/contexts/AuthContext.tsx` + `src/components/ProtectedRoute.tsx`: o **login está desligado**. O `ProtectedRoute` retorna `children` antes de qualquer checagem, e o `AuthContext` faz login automático com `VITE_DEV_ADMIN_*` sempre que não há sessão. Isso **não** depende de `import.meta.env.DEV`. E, como a produção é o próprio `npm run dev` (ver "Produção"), as credenciais vão no JavaScript servido a qualquer navegador que abra o app.
 - `src/config/cantina.ts`: nome e proprietário exibidos no header e no login. É o ponto de entrada futuro para multi-tenant.
 - `src/lib/saldo.ts` (`formatSaldo`) e `src/lib/masks.ts`: máscaras, `isCpfValido` (só conta 11 dígitos, **sem** dígito verificador) e `isTelefoneValido` (10 ou 11 dígitos; campo vazio é considerado válido).
 - Hooks em `src/hooks/`:
@@ -119,7 +140,10 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 ## Dívida técnica conhecida
 
-- **Segurança/produção:** o app está em produção com o login desligado. Qualquer pessoa com a URL entra direto com sessão de admin. Se o build de produção tiver `VITE_DEV_ADMIN_*`, a senha do admin vai embutida no JS público. A senha antiga também continua nos commits antigos do repo público; o que a neutraliza é a rotação que já foi feita.
+- **Segurança/produção:** o caixa roda com o login desligado e o Vite escuta em todas as interfaces (`host: "::"`).
+  - Qualquer pessoa numa rede que alcance esta máquina (Wi-Fi, hotspot, VPN) e abra `http://<ip>:8080` entra direto com sessão de admin.
+  - A senha do admin (`VITE_DEV_ADMIN_PASSWORD`) vai no JS servido a esse navegador.
+  - A senha antiga continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita.
 - **`fechar_mes` filtra por `status = 'ativo'`.** Fichas desativadas antes da remoção do recurso ficam com `inativo` para sempre: são ignoradas no fechamento e não há como reativá-las pela UI.
 - **"Fechar Mês Atual" só fecha o mês corrente**, e não há como fechar o mês anterior pela UI. Clicar no dia 1º fecha o mês novo, não o que acabou.
 - **Rodar o fechamento duas vezes no mesmo mês** (`ON CONFLICT DO NOTHING`) marca as compras novas como `fechado`, mas não soma elas ao `fechamentos.total`.
