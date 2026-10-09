@@ -19,6 +19,7 @@ import NovaVendaDialog from "@/components/NovaVendaDialog";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
+import { AmbienteTag } from "@/components/AmbienteIndicador";
 
 type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
 
@@ -266,7 +267,10 @@ const Index = () => {
               <span className="text-primary-foreground font-bold text-lg">🍽</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">{cantinaConfig.nome}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-foreground">{cantinaConfig.nome}</h1>
+                <AmbienteTag />
+              </div>
               <p className="text-xs text-muted-foreground">{cantinaConfig.proprietario}</p>
             </div>
           </div>
