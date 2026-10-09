@@ -6,9 +6,11 @@
 // vai dentro da URL embutida no bundle): não é credencial.
 //
 // Regras para produção (npm run dev, build e deploy): só barra o que impediria
-// o app de funcionar (URL/chave ausentes ou malformadas) ou o que indica banco
-// trocado (VITE_SUPABASE_PROJECT_ID presente e diferente da URL).
-// VITE_SUPABASE_PROJECT_ID AUSENTE é tolerado. Em modo staging ela é obrigatória.
+// o app de funcionar (URL/chave ausentes, URL que o supabase-js recusa ou com caminho) ou o que
+// indica banco trocado (VITE_SUPABASE_PROJECT_ID presente e diferente da URL).
+// - VITE_SUPABASE_PROJECT_ID AUSENTE é tolerado. Em modo staging é obrigatória.
+// - Domínio personalizado do Supabase (host que não é <ref>.supabase.co) é
+//   aceito; nesse caso a ref vem do VITE_SUPABASE_PROJECT_ID, se houver.
 export const REF_PRODUCAO = "yqhiazfknioaxlyzobrz";
 
 export interface Ambiente {
@@ -73,22 +75,29 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
     });
   }
 
-  let ref = "";
+  // ref vinda da URL (só quando o host é <ref>.supabase.co). Com domínio
+  // personalizado do Supabase, o host não revela a ref: aí vale o
+  // VITE_SUPABASE_PROJECT_ID, se existir.
+  let refDaUrl = "";
   let origem = "";
   if (url) {
     try {
       const u = new URL(url);
-      const m = u.hostname.match(/^([a-z0-9]+)\.supabase\.co$/);
-      if (u.protocol !== "https:" || !m) {
+      // Mesma regra do supabase-js (validateSupabaseUrl): http ou https.
+      if (u.protocol !== "https:" && u.protocol !== "http:") {
         erros.push({
           variavel: "VITE_SUPABASE_URL",
-          problema: `Não está no formato https://<ref>.supabase.co (valor atual: ${url}).`,
+          problema: `Precisa começar com https:// (valor atual: ${url}).`, // http:// também é aceito
           comoCorrigir: `Use a Project URL exatamente como aparece no Supabase (Settings → API). ${ONDE_CONFIGURAR}`,
         });
       } else {
-        ref = m[1];
         origem = u.origin;
+        const m = u.hostname.match(/^([a-z0-9]+)\.supabase\.co$/);
+        if (m) refDaUrl = m[1];
       }
+      // Uma URL com caminho não funciona: o supabase-js monta o endpoint com
+      // new URL("rest/v1", url) e chamaria .../rest/v1/rest/v1. Barrar aqui não
+      // derruba nenhuma configuração que funcione hoje.
       if (u.pathname !== "/" || u.search || u.hash) {
         erros.push({
           variavel: "VITE_SUPABASE_URL",
@@ -105,13 +114,16 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
     }
   }
 
-  if (ref && projectId && ref !== projectId) {
+  if (refDaUrl && projectId && refDaUrl !== projectId) {
     erros.push({
       variavel: "VITE_SUPABASE_PROJECT_ID",
-      problema: `O valor (${projectId}) é de um projeto diferente do da URL (${ref}). A configuração está misturando dois bancos.`,
-      comoCorrigir: `Deixe VITE_SUPABASE_PROJECT_ID igual a ${ref}, ou apague essa variável (em produção ela é opcional). ${ONDE_CONFIGURAR}`,
+      problema: `O valor (${projectId}) é de um projeto diferente do da URL (${refDaUrl}). A configuração está misturando dois bancos.`,
+      comoCorrigir: `Deixe VITE_SUPABASE_PROJECT_ID igual a ${refDaUrl}, ou apague essa variável (em produção ela é opcional). ${ONDE_CONFIGURAR}`,
     });
   }
+
+  // Ref efetiva: a da URL; com domínio personalizado, a declarada no PROJECT_ID.
+  const ref = refDaUrl || projectId;
 
   if (modoStaging && ref === REF_PRODUCAO) {
     erros.push({
@@ -123,9 +135,14 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
   }
 
   if (erros.length > 0) return { ok: false, ambiente: null, erros };
+
+  // Fora do modo staging, uma ref desconhecida (domínio personalizado sem
+  // PROJECT_ID) é tratada como produção: é o que "npm run dev" significa neste
+  // projeto. Em modo staging o PROJECT_ID é obrigatório, então a ref sempre existe.
+  const tipo: Ambiente["tipo"] = ref === REF_PRODUCAO || (!ref && !modoStaging) ? "producao" : "staging";
   return {
     ok: true,
-    ambiente: { tipo: ref === REF_PRODUCAO ? "producao" : "staging", ref, url: origem, chave },
+    ambiente: { tipo, ref: ref || new URL(origem).hostname, url: origem, chave },
     erros: [],
   };
 }

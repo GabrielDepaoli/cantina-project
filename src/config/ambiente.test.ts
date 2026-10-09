@@ -53,9 +53,27 @@ describe("validarAmbiente — produção (deploy)", () => {
     expect(texto(env({ VITE_SUPABASE_URL: `${URL_PROD}/rest/v1/` }))).toMatch(/sem \/rest\/v1\//);
   });
 
-  it("URL fora do formato do Supabase → erro", () => {
-    expect(texto(env({ VITE_SUPABASE_URL: "http://localhost:54321" }))).toMatch(/formato/);
+  it("http é aceito, como no supabase-js; outro protocolo ou URL inválida → erro", () => {
+    expect(validarAmbiente(env({ VITE_SUPABASE_URL: `http://${REF_PRODUCAO}.supabase.co` })).ok).toBe(true);
+    expect(texto(env({ VITE_SUPABASE_URL: "ftp://exemplo.com" }))).toMatch(/https:\/\//);
     expect(texto(env({ VITE_SUPABASE_URL: "não é url" }))).toMatch(/Não é uma URL válida/);
+  });
+
+  it("domínio personalizado do Supabase, sem PROJECT_ID → abre como producao", () => {
+    const r = validarAmbiente(env({ VITE_SUPABASE_URL: "https://db.exemplo.com", VITE_SUPABASE_PROJECT_ID: "" }));
+    expect(r.ok).toBe(true);
+    expect(r.ambiente?.tipo).toBe("producao");
+    expect(r.ambiente?.url).toBe("https://db.exemplo.com");
+  });
+
+  it("domínio personalizado com PROJECT_ID de produção → producao (não há como cruzar com o host)", () => {
+    const r = validarAmbiente(env({ VITE_SUPABASE_URL: "https://db.exemplo.com" }));
+    expect(r.ok).toBe(true);
+    expect(r.ambiente?.tipo).toBe("producao");
+  });
+
+  it("domínio personalizado com caminho → erro (o supabase-js chamaria .../rest/v1/rest/v1)", () => {
+    expect(texto(env({ VITE_SUPABASE_URL: "https://db.exemplo.com/rest/v1/" }))).toMatch(/sem \/rest\/v1\//);
   });
 
   it("todo erro diz qual variável, qual o problema e como corrigir", () => {
@@ -82,6 +100,13 @@ describe("validarAmbiente — staging (npm run dev:staging)", () => {
 
   it("URL de staging mas PROJECT_ID herdado de produção → erro", () => {
     expect(variaveis(env({ MODE: "staging", VITE_SUPABASE_URL: URL_STG }))).toEqual(["VITE_SUPABASE_PROJECT_ID"]);
+  });
+
+  it("domínio personalizado + PROJECT_ID de staging → staging; + PROJECT_ID de produção → erro", () => {
+    const base = { MODE: "staging", VITE_SUPABASE_URL: "https://stg.exemplo.com" };
+    const ok = validarAmbiente(env({ ...base, VITE_SUPABASE_PROJECT_ID: REF_STG }));
+    expect(ok.ambiente?.tipo).toBe("staging");
+    expect(texto(env({ ...base, VITE_SUPABASE_PROJECT_ID: REF_PRODUCAO }))).toMatch(/PRODUÇÃO/);
   });
 
   it("sem PROJECT_ID → erro (obrigatória só neste modo)", () => {

@@ -10,7 +10,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - **App 100% front-end**, sem servidor próprio. O **Supabase é o único backend**: Postgres, Auth, RLS e funções RPC. O cliente fica em `src/integrations/supabase/client.ts`.
 - Variáveis de ambiente (`.env`, nunca versionado; o template é `.env.example`): `VITE_SUPABASE_URL` (só a URL base, **sem** `/rest/v1/`), `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, `VITE_DEV_ADMIN_EMAIL` e `VITE_DEV_ADMIN_PASSWORD`.
 - **Validação do ambiente** (`src/config/ambiente.ts`). `main.tsx` valida as variáveis **antes** de carregar o app. Se algo estiver errado, mostra uma tela de erro (`src/components/ErroConfiguracao.tsx`) que diz qual variável está errada e o que fazer; não existe mais tela em branco. Regras:
-  - URL e chave são obrigatórias, e a URL precisa ser `https://<ref>.supabase.co`, sem caminho.
+  - URL e chave são obrigatórias. A URL aceita o que o `supabase-js` aceita (`http`/`https`, inclusive domínio personalizado do Supabase), mas **sem caminho**: com caminho, o `supabase-js` chamaria `.../rest/v1/rest/v1`. Com domínio personalizado, a ref vem do `VITE_SUPABASE_PROJECT_ID`.
   - `VITE_SUPABASE_PROJECT_ID` **ausente é tolerado** em produção. **Presente e diferente** da ref da URL é erro. Em modo staging ela é obrigatória.
 - **Ambientes.** O banco conectado é deduzido da URL: a ref de produção é `REF_PRODUCAO`, em `ambiente.ts`; qualquer outra é staging.
   - `npm run dev` usa produção (`.env`). A tela mostra a etiqueta "Produção".
@@ -26,6 +26,12 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - **Mudança de schema:** escreva o SQL numa **migration nova** em `supabase/migrations/` e mantenha o `supabase/setup-completo.sql` sincronizado (hoje ele equivale às 5 migrations). **Quem roda é o usuário, manualmente, no SQL Editor do Supabase.** O assistente **nunca** tem acesso de execução ao banco. Atualize também `src/integrations/supabase/types.ts`, que é mantido à mão.
 - **Testes com dado real:** use fichas descartáveis **997/998/999**, criadas no banco real e **excluídas logo depois**. Nunca altere fichas reais. O número da ficha vai no máximo até 999, então essa convenção quebra se a cantina chegar a usar esses números de verdade.
 - **Nunca rode `git commit` nem `git push` sem pedido explícito.** O usuário faz os commits.
+- **Nomenclatura:**
+  - **Branches e mensagens de commit em inglês** (`feature/account-closing`, `feat: ...`, `fix: ...`).
+  - **Código e banco em português**, seguindo o vocabulário do domínio que já existe: schema, tabelas, colunas, funções SQL, componentes, hooks, variáveis e arquivos. Exemplos: `fiadores`, `saldo_atual`, `registrar_pagamento`, `FichaDetalheDialog`, `useFichas`, `periodos_fechamento`.
+  - **Não renomeie nada que já existe**, inclusive o que está em inglês (`ProtectedRoute`, `AuthContext`, `Login`, `NotFound`, `Index`, as chaves de view `dashboard` e `compra`).
+  - **O que for novo segue o padrão português.**
+  - **Exceções que ficam como estão:** convenções das ferramentas (prefixo `use` dos hooks React, componentes shadcn em `src/components/ui/`, sufixo `.test.ts`, nomes de variáveis `VITE_*`).
 - **Depois de toda mudança, rode `npx tsc --noEmit -p tsconfig.app.json`.** O `npx tsc --noEmit` puro **não checa nada**: o `tsconfig.json` é um "solution" com `"files": []`, e o comando na raiz lista 0 arquivos de `src`. O projeto roda com `strict: false` e `strictNullChecks: false`, então um tsc limpo prova pouco. Verifique também no navegador.
 - **Produção com dados reais:** qualquer operação destrutiva ou migration exige cuidado redobrado. Excluir uma ficha apaga em cascata as compras, os pagamentos e os fechamentos dela, sem volta.
 - **O repositório é PÚBLICO:** nenhum segredo, credencial ou dado de aluno no código, em migration, em comentário ou neste arquivo. O `.env` está no `.gitignore`. O `supabase/config.toml` e o `.claude/launch.json` são versionados, então não ponha nada sensível neles.
