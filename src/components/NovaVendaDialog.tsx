@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import EstadoContaBadge from "@/components/EstadoContaBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useFichas, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { formatSaldo } from "@/lib/saldo";
@@ -146,9 +147,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="font-mono font-bold text-primary shrink-0">#{f.numero_ficha}</span>
                     <span className="font-medium text-foreground shrink-0">{f.nome_aluno}</span>
-                    {f.bloqueada && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning shrink-0">Bloqueada</span>
-                    )}
+                    <EstadoContaBadge bloqueada={f.bloqueada} contexto="seletor" />
                   </div>
                   <span className="text-sm text-muted-foreground">{formatSaldo(Number(f.saldo_atual))}</span>
                 </button>

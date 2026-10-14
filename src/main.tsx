@@ -10,9 +10,6 @@ const root = createRoot(document.getElementById("root")!);
 if (!resultadoAmbiente.ok || !resultadoAmbiente.ambiente) {
   root.render(<ErroConfiguracao erros={resultadoAmbiente.erros} />);
 } else {
-  if (resultadoAmbiente.ambiente.tipo === "staging") {
-    document.title = `[STAGING] ${document.title}`;
-  }
   import("./App.tsx")
     .then(({ default: App }) => root.render(<App />))
     .catch((erro: unknown) =>
@@ -22,7 +19,8 @@ if (!resultadoAmbiente.ok || !resultadoAmbiente.ambiente) {
             {
               variavel: "—",
               problema: `Falha ao carregar o app: ${erro instanceof Error ? erro.message : String(erro)}`,
-              comoCorrigir: "Recarregue a página. Se persistir, verifique o console do navegador e o último deploy.",
+              comoCorrigir:
+                "Recarregue a página. Se persistir, veja o console do navegador e o terminal onde o npm run dev está rodando.",
             },
           ]}
         />,

@@ -40,7 +40,7 @@ const ErroConfiguracao = ({ erros }: { erros: ErroAmbiente[] }) => (
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          Modelo das variáveis: <code>.env.example</code>. Staging: <code>supabase/staging/LEIAME.md</code>.
+          Modelo das variáveis: <code>.env.example</code>.
         </p>
       </div>
     </div>

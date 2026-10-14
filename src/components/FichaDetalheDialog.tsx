@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import EstadoContaBadge from "@/components/EstadoContaBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
@@ -198,9 +199,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">#{ficha.numero_ficha}</span>
             {ficha.nome_aluno}
-            <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-              {!ficha.bloqueada ? "Ativo" : "Bloqueada"}
-            </span>
+            <EstadoContaBadge bloqueada={ficha.bloqueada} contexto="titulo" />
           </DialogTitle>
         </DialogHeader>
 

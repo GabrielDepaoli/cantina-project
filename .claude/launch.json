@@ -6,16 +6,10 @@
       "url": "http://localhost:8080"
     },
     {
-      "name": "cantina-producao-8085",
+      "name": "cantina-dev-8085",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "--port", "8085", "--strictPort"],
       "port": 8085
-    },
-    {
-      "name": "cantina-staging-8090",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:staging", "--", "--port", "8090", "--strictPort"],
-      "port": 8090
     }
   ]
 }

@@ -1,21 +1,15 @@
-// Identifica em qual banco o app está conectado (produção ou staging) e barra
-// configurações perigosas ANTES de qualquer acesso ao Supabase.
+// Valida a configuração do Supabase (.env) ANTES de qualquer acesso ao banco.
+// Se algo estiver errado, main.tsx mostra uma tela de erro dizendo qual
+// variável corrigir, em vez de uma tela em branco.
 //
-// O banco é deduzido da URL real, não de uma flag que alguém possa esquecer.
-// A ref de produção é pública (já está versionada em supabase/config.toml e
-// vai dentro da URL embutida no bundle): não é credencial.
-//
-// Regras para produção (npm run dev, build e deploy): só barra o que impediria
-// o app de funcionar (URL/chave ausentes, URL que o supabase-js recusa ou com caminho) ou o que
-// indica banco trocado (VITE_SUPABASE_PROJECT_ID presente e diferente da URL).
-// - VITE_SUPABASE_PROJECT_ID AUSENTE é tolerado. Em modo staging é obrigatória.
+// Só barra o que impediria o app de funcionar (URL/chave ausentes, URL que o
+// supabase-js recusa ou com caminho) ou o que indica banco trocado
+// (VITE_SUPABASE_PROJECT_ID presente e diferente da URL).
+// - VITE_SUPABASE_PROJECT_ID AUSENTE é tolerado.
 // - Domínio personalizado do Supabase (host que não é <ref>.supabase.co) é
-//   aceito; nesse caso a ref vem do VITE_SUPABASE_PROJECT_ID, se houver.
-export const REF_PRODUCAO = "yqhiazfknioaxlyzobrz";
+//   aceito; nesse caso não há ref na URL para comparar.
 
 export interface Ambiente {
-  tipo: "producao" | "staging";
-  ref: string;
   url: string;
   chave: string;
 }
@@ -35,18 +29,15 @@ export interface ResultadoAmbiente {
 }
 
 export interface EnvEntrada {
-  MODE: string;
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   VITE_SUPABASE_PROJECT_ID?: string;
 }
 
-const ONDE_CONFIGURAR =
-  "Corrija no arquivo .env (produção local), no .env.staging.local (staging) ou nas variáveis de ambiente da hospedagem, e reinicie/republique o app.";
+const ONDE_CONFIGURAR = "Corrija no arquivo .env, na pasta do projeto, e reinicie o npm run dev.";
 
 export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
   const erros: ErroAmbiente[] = [];
-  const modoStaging = env.MODE === "staging";
   const url = (env.VITE_SUPABASE_URL ?? "").trim();
   const chave = (env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim();
   const projectId = (env.VITE_SUPABASE_PROJECT_ID ?? "").trim();
@@ -65,19 +56,9 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
       comoCorrigir: `Defina com a chave anon/publishable do Supabase (Settings → API). ${ONDE_CONFIGURAR}`,
     });
   }
-  // Em staging o project id é obrigatório: é ele que denuncia um arquivo de
-  // staging incompleto herdando valores de produção do .env.
-  if (modoStaging && !projectId) {
-    erros.push({
-      variavel: "VITE_SUPABASE_PROJECT_ID",
-      problema: "Não está definida, e ela é obrigatória em modo staging (npm run dev:staging).",
-      comoCorrigir: "Coloque no .env.staging.local a ref do projeto de staging (o subdomínio da URL de staging).",
-    });
-  }
 
   // ref vinda da URL (só quando o host é <ref>.supabase.co). Com domínio
-  // personalizado do Supabase, o host não revela a ref: aí vale o
-  // VITE_SUPABASE_PROJECT_ID, se existir.
+  // personalizado do Supabase, o host não revela a ref.
   let refDaUrl = "";
   let origem = "";
   if (url) {
@@ -118,36 +99,17 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
     erros.push({
       variavel: "VITE_SUPABASE_PROJECT_ID",
       problema: `O valor (${projectId}) é de um projeto diferente do da URL (${refDaUrl}). A configuração está misturando dois bancos.`,
-      comoCorrigir: `Deixe VITE_SUPABASE_PROJECT_ID igual a ${refDaUrl}, ou apague essa variável (em produção ela é opcional). ${ONDE_CONFIGURAR}`,
-    });
-  }
-
-  // Ref efetiva: a da URL; com domínio personalizado, a declarada no PROJECT_ID.
-  const ref = refDaUrl || projectId;
-
-  if (modoStaging && ref === REF_PRODUCAO) {
-    erros.push({
-      variavel: "VITE_SUPABASE_URL",
-      problema: "O app foi iniciado em modo staging (npm run dev:staging), mas a URL aponta para o banco de PRODUÇÃO.",
-      comoCorrigir:
-        "Provavelmente falta VITE_SUPABASE_URL no .env.staging.local e o valor de produção do .env foi herdado. Preencha as cinco variáveis no .env.staging.local (ver supabase/staging/LEIAME.md).",
+      comoCorrigir: `Deixe VITE_SUPABASE_PROJECT_ID igual a ${refDaUrl}, ou apague essa variável (ela é opcional). ${ONDE_CONFIGURAR}`,
     });
   }
 
   if (erros.length > 0) return { ok: false, ambiente: null, erros };
-
-  // Fora do modo staging, uma ref desconhecida (domínio personalizado sem
-  // PROJECT_ID) é tratada como produção: é o que "npm run dev" significa neste
-  // projeto. Em modo staging o PROJECT_ID é obrigatório, então a ref sempre existe.
-  const tipo: Ambiente["tipo"] = ref === REF_PRODUCAO || (!ref && !modoStaging) ? "producao" : "staging";
-  return {
-    ok: true,
-    ambiente: { tipo, ref: ref || new URL(origem).hostname, url: origem, chave },
-    erros: [],
-  };
+  return { ok: true, ambiente: { url: origem, chave }, erros: [] };
 }
 
-export const resultadoAmbiente = validarAmbiente(import.meta.env);
+// Cast necessário: o tipo do Vite não declara as VITE_* e EnvEntrada só tem
+// campos opcionais (o TypeScript recusa tipos sem nenhum campo em comum).
+export const resultadoAmbiente = validarAmbiente(import.meta.env as EnvEntrada);
 
 // Para componentes do app: só são carregados depois que a validação passou
 // (ver main.tsx), então aqui o ambiente sempre existe.

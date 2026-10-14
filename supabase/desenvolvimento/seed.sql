@@ -1,13 +1,14 @@
 -- ============================================================================
--- SEED DE STAGING — fichas e lançamentos de teste para o fechamento de contas.
--- Só roda em banco marcado como staging (ver 00-marcador.sql).
+-- SEED DE DESENVOLVIMENTO — fichas e lançamentos de teste para o fechamento.
+-- Só roda em banco marcado como desenvolvimento (ver 00-marcador.sql) e que
+-- ainda não entrou em uso.
 --
 -- Rodar de novo sempre volta ao MESMO estado: o seed começa com o reset.
 -- As datas são relativas a HOJE (fuso America/Sao_Paulo), então o seed não
 -- envelhece. Nenhum dado real: fichas 901–908, nomes "Teste ...".
 --
 -- Períodos (dia-âncora 6 por padrão; usa configuracao.dia_fechamento quando a
--- tabela existir, a partir da etapa 2):
+-- tabela existir, a partir da etapa 1 do plano v6):
 --   P1..P4 = os 4 períodos JÁ ENCERRADOS mais recentes (P4 = o mais recente).
 --   Cada lançamento cai no 2º dia do período, às 10:00 de São Paulo, ou seja,
 --   antes do corte daquele período.
@@ -20,19 +21,22 @@ DO $$
 DECLARE
   v_tabelas text;
 BEGIN
-  -- Duas checagens separadas: a segunda só é analisada se a tabela existir.
-  IF to_regclass('public._ambiente') IS NULL THEN
-    RAISE EXCEPTION 'Banco sem a marca de staging. seed.sql NUNCA roda em produção.';
+  -- mesma guarda do reset.sql
+  IF to_regclass('public._em_uso') IS NOT NULL THEN
+    RAISE EXCEPTION 'Este banco está EM USO, com dados reais. seed.sql não roda mais aqui.';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public._ambiente WHERE nome = 'staging') THEN
-    RAISE EXCEPTION 'Banco sem a marca de staging. seed.sql NUNCA roda em produção.';
+  IF to_regclass('public._ambiente') IS NULL THEN
+    RAISE EXCEPTION 'Banco sem a marca de desenvolvimento (rode 00-marcador.sql). Nada foi apagado.';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public._ambiente WHERE nome = 'desenvolvimento') THEN
+    RAISE EXCEPTION 'Banco sem a marca de desenvolvimento (rode 00-marcador.sql). Nada foi apagado.';
   END IF;
 
   -- mesma lógica do reset.sql
   SELECT string_agg(format('public.%I', t), ', ')
     INTO v_tabelas
     FROM unnest(ARRAY[
-      'correcoes_saldo', 'periodo_divergencias', 'fechamento_itens', 'periodos_fechamento',
+      'periodo_divergencias', 'fechamento_itens', 'periodos_fechamento',
       'configuracao_historico', 'fechamentos', 'pagamentos', 'compras', 'fiadores'
     ]) AS t
    WHERE to_regclass(format('public.%I', t)) IS NOT NULL;
@@ -101,7 +105,7 @@ BEGIN
             'Só pode comprar salgado assado (anotação de teste)'),
     ('908', 'Teste 908 — Quitou e voltou a dever',  'Responsável Teste', 'dependente', '(11) 90000-0908', false, NULL);
 
-  -- Inserção direta (como postgres, só em staging) para poder datar no passado.
+  -- Inserção direta (como postgres, só em desenvolvimento) para poder datar no passado.
   -- O saldo_atual é acertado no fim, para o razão e o saldo baterem.
   INSERT INTO public.compras (fiador_id, descricao, valor, data, mes_referencia)
   SELECT f.id, x.descricao, x.valor, x.quando,
