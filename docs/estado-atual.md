@@ -45,15 +45,30 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - `tsc` limpo.
 - Plano: o host do pooler e o caminho local do backup viraram marcadores genéricos. O host antigo continua no histórico do commit `723ead3`; não é segredo.
 
+## Etapa 2c — Hooks do fechamento: concluída (14/10)
+
+- `src/hooks/useFechamentos.ts` reescrito com os hooks de leitura e escrita do fechamento e as funções `buscar*` sem React.
+- `src/lib/errosBanco.ts` traduz os erros `CFxxx` do banco, com 2 testes.
+- `useDeleteFicha` passa a checar a linha apagada e mostra a mensagem do banco quando a ficha tem fechamento em aberto. O texto de confirmação de exclusão ganhou essa explicação.
+- Venda, pagamento e exclusão de ficha invalidam as consultas do fechamento.
+- Os tipos de criar e editar ficha só aceitam as colunas liberadas no banco.
+- **Verificado contra o banco real**, só leitura:
+  - 4 pendentes (06/06 a 05/10) + o período em andamento;
+  - prévia com 3 fichas e R$ 105;
+  - 0 divergências, 0 atrasos, 0 períodos;
+  - dia 6;
+  - simulação do dia 20 bloqueada por 4 pendentes.
+- **Também:** 51 testes passando, `tsc` limpo e app abrindo sem erro no console.
+
 ## Próxima etapa
 
-- **2c** — hooks do fechamento (`useProximosPeriodos`, `useAtrasos`, `useFecharPeriodo` etc.), `useDeleteFicha` com checagem e invalidações. Nenhuma tela muda. Ela só começa quando você pedir.
+- **2d** — aba **Fechamento**: próximo a fechar e pendentes, botão com prévia e divergências, lista "Em aberto", histórico e badge de pendência na nav. É aqui que você fecha os 4 períodos do seed pelo botão. Ela só começa quando você pedir.
 
 ## Git
 
 - **Branch:** `feature/account-closing`.
-- **Último commit:** `723ead3 feat: period-based account closing in the database, single dev environment` (etapas A, 1 e 2a), já no remoto.
-- **Pendente de commit:** etapa 2b, os marcadores no plano, este arquivo e o `CLAUDE.md`.
+- **Último commit:** `10ed32d feat: solid account status badge and overdue chip building blocks` (etapa 2b). `723ead3` (A, 1 e 2a) já está no remoto; `10ed32d` ainda não foi enviado.
+- **Pendente de commit:** etapa 2c, este arquivo e o `CLAUDE.md`.
 
 ## Decisões em aberto
 

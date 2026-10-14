@@ -12,6 +12,7 @@ import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
+import { mensagemErro } from "@/lib/errosBanco";
 
 interface FichaDetalheDialogProps {
   ficha: Ficha | null;
@@ -164,8 +165,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         setConfirmDeleteOpen(false);
         onOpenChange(false);
       },
-      onError: () => {
-        toast({ title: "Erro", description: "Não foi possível excluir a ficha.", variant: "destructive" });
+      onError: (erro) => {
+        // CF001: ficha com fechamento em aberto (a mensagem do banco explica).
+        toast({ title: "Erro", description: mensagemErro(erro, "Não foi possível excluir a ficha."), variant: "destructive" });
       },
     });
   };
@@ -431,7 +433,8 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Isso remove a ficha e todo o histórico de compras e pagamentos dela permanentemente. Essa ação não pode
-            ser desfeita.
+            ser desfeita. Fichas com fechamento em aberto não podem ser excluídas; os fechamentos já quitados ficam
+            no histórico com o número e o nome da ficha.
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>

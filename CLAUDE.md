@@ -100,9 +100,10 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - `src/components/FichaSelecionadaCard.tsx`: o card da etapa 2 da Nova Venda (saldo, atraso opcional, anotação, botão Trocar).
 - `src/lib/saldo.ts` (`formatSaldo`) e `src/lib/masks.ts`: máscaras, `isCpfValido` (só conta 11 dígitos, **sem** dígito verificador) e `isTelefoneValido` (10 ou 11 dígitos; campo vazio é considerado válido).
 - Hooks em `src/hooks/`:
-  - `useFichas.ts`: CRUD de fichas e `useRegistrarCompra`.
+  - `useFichas.ts`: CRUD de fichas e `useRegistrarCompra`. `NovaFicha`/`FichaUpdate` só aceitam as colunas que o banco deixa gravar. `useDeleteFicha` usa `.select()` e falha se não apagou exatamente 1 linha.
   - `usePagamentos.ts`: `useRegistrarPagamento` e `useExtrato`.
-  - (`useFechamentos.ts` foi removido na etapa 1; os hooks do fechamento novo voltam na etapa 2c.)
+  - `useFechamentos.ts`: fechamento por período. Leitura: `useProximosPeriodos` (`pendentes` + `emAndamento`), `usePreviaFechamento`, `useDivergencias`, `usePeriodos` (com itens e divergências), `useAtrasos` (Map por ficha), `useFichasEmAtraso`, `useConfiguracao`, `useSimularTrocaDia`. Escrita: `useFecharPeriodo`, `useDefinirDia`. Todas as chaves começam com `["fechamento"]`; venda, pagamento e exclusão de ficha invalidam esse prefixo. As funções `buscar*` são exportadas sem React.
+  - `src/lib/errosBanco.ts`: `codigoErro`, `mensagemErro` (usa a mensagem do banco nos erros `CFxxx`) e `divergenciasDoErro` (lista atual no `CF002`).
   - `useVendas.ts`: busca **todas** as compras.
   - `useFaturamento.ts`: soma das compras do dia local.
 - **`src/pages/Index.tsx`** orquestra tudo pelo state `view`. A nav segue esta ordem:
