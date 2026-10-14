@@ -114,6 +114,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
     - 5 atalhos: Realizar uma nova venda, Cadastrar nova ficha (abre a aba Fichas com o modal aberto), e três mocks com toast: Verificar devedores, Gerar relatório e Cadastrar produto.
   - **Fichas** (`fichas`):
     - Lista com número, nome, anotação truncada com ícone, responsável (só para dependente), saldo e badge sólido verde **Ativo** / vermelho **Bloqueada** (derivado de `bloqueada`).
+    - Ficha com fechamento em aberto: faixa lateral colorida + fundo suave no card (`classeLinhaAtraso`) e `AtrasoChip` abaixo do responsável.
     - A busca é por substring no número, no nome e no responsável. O state `search` é **compartilhado** com o Controle.
     - Modal "Nova Ficha": número só com dígitos, `maxLength=3`, completado com zeros, placeholder "Próx Num Livre: XXX" (o menor número livre). Switch Dependente/Independente. Validação de celular e CPF. Uma conta independente grava `nome_responsavel = "O Mesmo"`; fichas antigas podem ter `"O Próprio"`.
   - **Vendas** (`compra`; o título da tela é "Últimas Vendas"):
@@ -139,7 +140,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
     - Busca Rápida: o clique abre a **Nova Venda** já com a ficha selecionada.
     - Top 3 maiores saldos.
 - **`src/components/FichaDetalheDialog.tsx`** (detalhe da conta):
-  - Header: `#número`, nome e badge.
+  - Header: `#número`, nome, badge e, se houver, `AtrasoChip`.
   - Div cinza 1: saldo e os botões Editar/Cancelar, Trancar/Destrancar Conta (com confirmação) e Anotação (toggle).
   - Div cinza 2: checkbox "Disponibilizar SOMENTE valor Pré-Pago" (sem confirmação) e, à direita, responsável e celular. O Responsável 2 aparece com uma linha divisória quando há `resp2_nome`.
   - Anotação: textarea que salva sozinho no blur, na coluna `observacoes`.
@@ -148,7 +149,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   - Extrato: compras e pagamentos, só com data, do mais recente para o mais antigo.
 - **`src/components/NovaVendaDialog.tsx`** (aberto pelo Menu, pela aba Vendas, pelo Controle e pela **barra de espaço** em qualquer lugar fora de inputs e de modais):
   - **Etapa 1:** busca por número ou nome. Digitar um número e dar **Enter** seleciona a ficha pelo número exato completado com zeros (`1` ou `01` viram `001`); se não existir, mostra um toast. A lista mostra o badge sólido vermelho "Bloqueada" e não mostra a anotação.
-  - **Etapa 2:** card com saldo, anotação em âmbar e botão "Trocar".
+  - **Etapa 2:** card (`FichaSelecionadaCard`) com saldo, `AtrasoChip` numa linha própria (se houver), anotação em âmbar e botão "Trocar". O atraso não bloqueia a venda; a etapa 1 nunca mostra atraso.
     - Conta bloqueada: aparece um aviso e a venda fica impedida.
     - `somente_credito`: mostra o crédito disponível e bloqueia se o valor passar dele.
     - Descrição vazia vira "Valor Avulso".
@@ -170,7 +171,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   - Qualquer pessoa numa rede que alcance esta máquina (Wi-Fi, hotspot, VPN) e abra `http://<ip>:8080` entra direto com sessão de admin.
   - A senha do admin (`VITE_DEV_ADMIN_PASSWORD`) vai no JS servido a esse navegador.
   - A senha antiga continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita.
-- **Fechamento incompleto na UI:** a aba Fechamento existe (2d), mas o atraso nas telas de Fichas e Nova Venda (2e) e a tela de Configurações (2f) ainda não.
+- **Fechamento incompleto na UI:** falta a tela de Configurações (2f): trocar o dia de fechamento e conferir a integridade do razão ainda só pelo SQL Editor.
 - **Fuso horário:** `mes_referencia` usa `toISOString()` (UTC), então uma venda depois das 21h do último dia do mês ganha o rótulo do mês seguinte. É só rótulo: o fechamento usa `data` no fuso de São Paulo. O faturamento do dia usa o dia local.
 - **Não há estorno nem correção pela UI:** não existe como excluir ou editar uma venda ou um pagamento, e nem a API permite (só as RPCs escrevem no razão). Correção é manual, via SQL Editor, mantendo razão e saldo iguais.
 - **Travas só no client:** `bloqueada` e `somente_credito` não são validadas nas RPCs. O teste de crédito usa um snapshot da ficha selecionada.

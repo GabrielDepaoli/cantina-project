@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
 import FichaSelecionadaCard from "@/components/FichaSelecionadaCard";
+import { useAtrasos } from "@/hooks/useFechamentos";
 import { useToast } from "@/hooks/use-toast";
 import { useFichas, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { formatSaldo } from "@/lib/saldo";
@@ -21,6 +22,8 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
   const { toast } = useToast();
   const { data: fichas = [] } = useFichas();
   const registrarCompra = useRegistrarCompra();
+  // Atraso só na etapa 2 (ficha escolhida); a busca da etapa 1 não mostra.
+  const { data: atrasos } = useAtrasos();
 
   const [search, setSearch] = useState("");
   const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
@@ -160,7 +163,11 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
           </div>
         ) : (
           <div className="space-y-4">
-            <FichaSelecionadaCard ficha={selectedFicha} onTrocar={() => setSelectedFicha(null)} />
+            <FichaSelecionadaCard
+              ficha={selectedFicha}
+              atraso={atrasos?.get(selectedFicha.id)?.atraso}
+              onTrocar={() => setSelectedFicha(null)}
+            />
 
             {selectedFicha.bloqueada ? (
               <Card className="border-warning/30">

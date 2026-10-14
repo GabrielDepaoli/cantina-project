@@ -79,9 +79,21 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
 - **54 testes passando e `tsc` limpo.**
 - **Estado do banco agora:** 4 períodos fechados e a 903 quitada. Para voltar ao início (4 pendentes), rode `supabase/desenvolvimento/seed.sql`.
 
+## Etapa 2e — Atraso nas telas existentes: concluída (14/10)
+
+- **Lista de Fichas:** faixa lateral + fundo suave + chip nas fichas em aberto.
+- **Detalhe:** chip no título, ao lado do badge.
+- **Nova Venda, etapa 2:** chip numa linha própria, acima da anotação.
+- **Nova Venda, etapa 1:** sem atraso, conferido com 8 fichas listadas e 0 chips.
+- **Verificado no navegador:**
+  - faixa laranja (2) e vermelha (4) nas fichas certas, e a 903 quitada sem faixa;
+  - a 906 com "Bloqueada" sólido e "4 períodos em atraso" no título;
+  - a 907 com chip e anotação na venda.
+- **54 testes passando e `tsc` limpo.**
+
 ## Próxima etapa
 
-- **2e** — atraso nas telas existentes: faixa e chip na lista de Fichas, chip no título do detalhe e chip na etapa 2 da Nova Venda. A etapa 1 continua sem atraso.
+- **2f** — tela de **Configurações**: dia-âncora com simulação e bloqueios (pendência e transição aberta), histórico de trocas e "Integridade do razão".
 
 ## Git
 

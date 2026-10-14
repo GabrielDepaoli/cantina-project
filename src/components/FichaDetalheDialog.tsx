@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
+import AtrasoChip from "@/components/AtrasoChip";
+import { useAtrasos } from "@/hooks/useFechamentos";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
@@ -26,6 +28,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const deleteFicha = useDeleteFicha();
   const registrarPagamento = useRegistrarPagamento();
   const { data: extrato = [], isLoading: extratoLoading } = useExtrato(ficha?.id);
+  const { data: atrasos } = useAtrasos();
 
   const [editando, setEditando] = useState(false);
   const [mostrarAnotacao, setMostrarAnotacao] = useState(false);
@@ -202,6 +205,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
             <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">#{ficha.numero_ficha}</span>
             {ficha.nome_aluno}
             <EstadoContaBadge bloqueada={ficha.bloqueada} contexto="titulo" />
+            <AtrasoChip atraso={atrasos?.get(ficha.id)?.atraso} className="font-medium" />
           </DialogTitle>
         </DialogHeader>
 

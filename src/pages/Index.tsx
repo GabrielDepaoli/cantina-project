@@ -17,7 +17,9 @@ import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
 import AbaFechamento from "@/components/fechamento/AbaFechamento";
-import { useProximosPeriodos } from "@/hooks/useFechamentos";
+import { useAtrasos, useProximosPeriodos } from "@/hooks/useFechamentos";
+import AtrasoChip, { classeLinhaAtraso } from "@/components/AtrasoChip";
+import { cn } from "@/lib/utils";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
@@ -34,6 +36,7 @@ const Index = () => {
   const { data: faturamentoDia = 0 } = useFaturamentoDia();
   const { data: vendas = [] } = useVendas();
   const { pendentes: periodosPendentes } = useProximosPeriodos();
+  const { data: atrasos } = useAtrasos();
 
   const [view, setView] = useState<View>("menu");
   const [mostrarFaturamento, setMostrarFaturamento] = useState(false);
@@ -632,7 +635,7 @@ const Index = () => {
               {filteredFichas.map(f => (
                 <Card
                   key={f.id}
-                  className="hover:shadow-sm transition-shadow cursor-pointer"
+                  className={cn("hover:shadow-sm transition-shadow cursor-pointer", classeLinhaAtraso(atrasos?.get(f.id)?.atraso))}
                   onClick={() => { setDetalheFicha(f); setDetalheOpen(true); }}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
@@ -652,6 +655,11 @@ const Index = () => {
                         </div>
                         {f.tipo === "dependente" && (
                           <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
+                        )}
+                        {atrasos?.has(f.id) && (
+                          <div className="mt-1">
+                            <AtrasoChip atraso={atrasos.get(f.id)!.atraso} />
+                          </div>
                         )}
                       </div>
                     </div>
