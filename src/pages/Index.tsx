@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote, CalendarCheck } from "lucide-react";
+import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote, CalendarCheck, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
 import AbaFechamento from "@/components/fechamento/AbaFechamento";
+import TelaConfiguracoes from "@/components/configuracoes/TelaConfiguracoes";
 import { useAtrasos, useProximosPeriodos } from "@/hooks/useFechamentos";
 import AtrasoChip, { classeLinhaAtraso } from "@/components/AtrasoChip";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
 
-type View = "menu" | "dashboard" | "fichas" | "compra" | "fechamento" | "relatorios";
+type View = "menu" | "dashboard" | "fichas" | "compra" | "fechamento" | "relatorios" | "configuracoes";
 
 const Index = () => {
   const { toast } = useToast();
@@ -262,9 +263,21 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">{cantinaConfig.proprietario}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-1" /> Sair
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={view === "configuracoes" ? "text-primary" : "text-muted-foreground"}
+              onClick={() => setView("configuracoes")}
+              aria-label="Configurações"
+              title="Configurações"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-1" /> Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -741,6 +754,13 @@ const Index = () => {
         {view === "fechamento" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <AbaFechamento onAbrirFicha={f => { setDetalheFicha(f); setDetalheOpen(true); }} />
+          </motion.div>
+        )}
+
+        {/* CONFIGURAÇÕES */}
+        {view === "configuracoes" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <TelaConfiguracoes onIrParaFechamento={() => setView("fechamento")} />
           </motion.div>
         )}
 

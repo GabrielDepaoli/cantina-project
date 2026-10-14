@@ -46,7 +46,8 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 - **Sinal do saldo:** `saldo_atual` **POSITIVO no banco = DÍVIDA; NEGATIVO = CRÉDITO.** A exibição inverte isso em `src/lib/saldo.ts` (`formatSaldo`): uma dívida aparece como `-R$ X.XX` e um crédito como `R$ X.XX (CRÉDITO)`. Nunca confunda os dois sinais, nem em SQL, nem em cálculo, nem em UI.
 - **Toda mutação de saldo passa por função RPC atômica** (`registrar_compra`, `registrar_pagamento`). Nunca leia e depois escreva `saldo_atual` do client. Desde a migration `20261014120000_fechamento_contas.sql`, o banco **impõe** isso: `authenticated` não tem privilégio de escrever `saldo_atual`, nem de escrever direto em `compras`, `pagamentos` e nas tabelas do fechamento.
-- **Mudança de schema:** escreva o SQL numa **migration nova** em `supabase/migrations/` e **acrescente o mesmo texto, sem alterar, como nova seção** no fim do `supabase/setup-completo.sql` (o teste `src/test/banco/` confere que a última migration está lá). **Quem roda é o usuário, manualmente, no SQL Editor do Supabase.** O assistente **nunca** tem acesso de execução ao banco. Atualize também `src/integrations/supabase/types.ts`, que é mantido à mão, e escreva testes em `src/test/banco/`.
+- **Mudança de schema:** escreva o SQL numa **migration nova** em `supabase/migrations/` e **acrescente o mesmo texto, sem alterar, como nova seção** no fim do `supabase/setup-completo.sql` (o teste `src/test/banco/` confere que cada migration do fechamento em diante está lá). Migration já aplicada no banco não se edita: corrija com outra migration (`CREATE OR REPLACE`). **Quem roda é o usuário, manualmente, no SQL Editor do Supabase.** O assistente **nunca** tem acesso de execução ao banco. Atualize também `src/integrations/supabase/types.ts`, que é mantido à mão, e escreva testes em `src/test/banco/`.
+- **Todo `UPDATE`/`DELETE` em função do banco precisa de `WHERE`.** O Supabase carrega a extensão `safeupdate` nas sessões da API e recusa comando sem `WHERE` ("UPDATE requires a WHERE clause", código `21000`), mesmo dentro de função SECURITY DEFINER. Na tabela de uma linha só (`configuracao`), use `WHERE id`. O PGlite não tem essa extensão; um teste em `src/test/banco/` confere o texto das funções.
 - **Testes do banco** (`src/test/banco/`, Vitest + PGlite, ambiente node): rodam o `setup-completo.sql` num Postgres em memória que imita o Supabase (papéis `anon`/`authenticated`, privilégios padrão, `auth.uid()`). `supabaseSimulado.ts` tem os auxiliares: `fixarHoje` troca `hoje_sp()` por uma data fixa, `como(db, "authenticated", ...)` roda como a API. Toda função nova do banco precisa de teste aqui.
 - **Testes com dado real:** use fichas descartáveis **997/998/999**, criadas no banco real e **excluídas logo depois**. Nunca altere fichas reais. O número da ficha vai no máximo até 999, então essa convenção quebra se a cantina chegar a usar esses números de verdade.
 - **Nunca rode `git commit` nem `git push` sem pedido explícito.** O usuário faz os commits.
@@ -131,6 +132,18 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
     - "Em aberto": `LinhaFichaEmAberto`, com saldo ao vivo, `AtrasoChip`, faixa lateral e badge. O clique abre o detalhe.
     - "Histórico": `HistoricoPeriodos`, em accordion, com o valor no fechamento, "quitado em" ou "em aberto" e as divergências aceitas.
     - Props reservadas para o futuro, ainda não usadas: `extrasCabecalho`, `indicadores` e `acoesFicha`.
+  - **Configurações** (`configuracoes`; ícone de engrenagem no header, fora da nav; `src/components/configuracoes/`):
+    - **Dia de fechamento** (`SecaoDiaFechamento`):
+      - mostra o dia atual e um campo para o novo dia;
+      - simula ao digitar ("Período de transição de … (N dias)" ou "Sem período de transição");
+      - pede confirmação, com checkbox extra se a transição tiver menos de 7 dias;
+      - fica bloqueado, com "Ir para Fechamento", quando há período pendente ou a transição da troca anterior ainda está aberta;
+      - mostra o histórico de trocas.
+    - **Integridade do razão** (`SecaoIntegridade`):
+      - "Conferir agora" é só leitura;
+      - "Nenhuma divergência … Conferido às HH:MM" ou uma tabela com saldo no banco, saldo pelo razão e diferença;
+      - não há botão de corrigir;
+      - lista os fechamentos com divergência aceita.
   - **Relatórios** (`relatorios`):
     - Cards "Fichas com Saldo Pendente" (saldo > 0) e "Total Geral a Receber". Os dois têm cursor de clique, mas não fazem nada.
     - Card "Exportar Relatório": sem ação nenhuma, nem toast.
@@ -171,7 +184,6 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   - Qualquer pessoa numa rede que alcance esta máquina (Wi-Fi, hotspot, VPN) e abra `http://<ip>:8080` entra direto com sessão de admin.
   - A senha do admin (`VITE_DEV_ADMIN_PASSWORD`) vai no JS servido a esse navegador.
   - A senha antiga continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita.
-- **Fechamento incompleto na UI:** falta a tela de Configurações (2f): trocar o dia de fechamento e conferir a integridade do razão ainda só pelo SQL Editor.
 - **Fuso horário:** `mes_referencia` usa `toISOString()` (UTC), então uma venda depois das 21h do último dia do mês ganha o rótulo do mês seguinte. É só rótulo: o fechamento usa `data` no fuso de São Paulo. O faturamento do dia usa o dia local.
 - **Não há estorno nem correção pela UI:** não existe como excluir ou editar uma venda ou um pagamento, e nem a API permite (só as RPCs escrevem no razão). Correção é manual, via SQL Editor, mantendo razão e saldo iguais.
 - **Travas só no client:** `bloqueada` e `somente_credito` não são validadas nas RPCs. O teste de crédito usa um snapshot da ficha selecionada.

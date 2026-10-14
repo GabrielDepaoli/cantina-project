@@ -400,11 +400,29 @@ describe("permissões (como a API do app)", () => {
 
 // ---------------------------------------------------------------------------
 describe("arquivos SQL do repositório", () => {
-  it("setup-completo.sql contém a última migration sem alteração", () => {
+  it("setup-completo.sql contém, sem alteração, cada migration do fechamento em diante", () => {
     const normalizar = (s: string) => s.replace(/\r\n/g, "\n");
-    const ultima = migrationsEmOrdem().at(-1)!;
-    expect(normalizar(lerSql("setup-completo.sql"))).toContain(normalizar(lerSql(ultima)));
+    const setup = normalizar(lerSql("setup-completo.sql"));
+    const recentes = migrationsEmOrdem().filter((m) => m >= "migrations/20261014120000");
+    expect(recentes.length).toBeGreaterThan(0);
+    for (const m of recentes) expect(setup, m).toContain(normalizar(lerSql(m)));
   });
+
+  // O Supabase carrega a extensão safeupdate nas sessões da API: UPDATE/DELETE
+  // sem WHERE falha com "UPDATE requires a WHERE clause", mesmo dentro de
+  // função SECURITY DEFINER. O PGlite não tem essa extensão, então a regra é
+  // conferida no texto das funções.
+  it("nenhuma função do banco faz UPDATE ou DELETE sem WHERE (safeupdate do Supabase)", async () => {
+    const db = await criarBanco();
+    const r = await db.query<{ proname: string; prosrc: string }>(
+      "SELECT proname, prosrc FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND prolang <> 12");
+    const semWhere: string[] = [];
+    for (const { proname, prosrc } of r.rows) {
+      const comandos = prosrc.match(/(?<!FOR\s+)\b(UPDATE|DELETE\s+FROM)\s+[\w.]+[\s\S]*?;/gi) ?? [];
+      for (const c of comandos) if (!/\bWHERE\b/i.test(c)) semWhere.push(`${proname}: ${c.replace(/\s+/g, " ").slice(0, 80)}`);
+    }
+    expect(semWhere).toEqual([]);
+  }, T);
 
   it("aplicar as migrations em ordem sobre o banco antigo funciona e remove o fechamento antigo", async () => {
     const db = await criarBanco("migrations");

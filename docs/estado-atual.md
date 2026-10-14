@@ -91,9 +91,29 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - a 907 com chip e anotação na venda.
 - **54 testes passando e `tsc` limpo.**
 
-## Próxima etapa
+## Etapa 2f — Configurações: código pronto, falta rodar uma migration de correção
 
-- **2f** — tela de **Configurações**: dia-âncora com simulação e bloqueios (pendência e transição aberta), histórico de trocas e "Integridade do razão".
+- **Tela:** `src/components/configuracoes/`, aberta pela engrenagem no header.
+  - Dia de fechamento: simulação, confirmação, aviso de transição curta, bloqueios com "Ir para Fechamento" e histórico.
+  - Integridade do razão: conferência só de leitura.
+- **Verificado no navegador:**
+  - simulação do dia 8: transição 06/10–07/10, 2 dias;
+  - simulação do dia 20: transição 06/10–19/10, 14 dias;
+  - dia 45 recusado;
+  - "Conferir agora" sem divergência nas 8 fichas.
+- **Erro encontrado na troca real:** `UPDATE requires a WHERE clause`.
+  - O Supabase usa a extensão `safeupdate`, que recusa UPDATE sem WHERE pela API, e o PGlite não tem essa extensão.
+  - **Correção:** migration `20261014150000_definir_dia_com_where.sql` (também na seção 7 do setup).
+  - **Novo teste:** confere que nenhuma função tem UPDATE/DELETE sem WHERE.
+  - 55 testes passando.
+- **Para você fazer:**
+  - [ ] Rodar `supabase/migrations/20261014150000_definir_dia_com_where.sql` no SQL Editor.
+  - Depois disso eu testo a troca de dia de verdade (dia 20 → bloqueio da segunda troca).
+
+## Etapa 2 — resumo
+
+- 2a a 2f prontas. Falta só confirmar a troca de dia depois da migration de correção.
+- **Próxima depois da 2:** etapa **3**, rodada final de testes.
 
 ## Git
 
