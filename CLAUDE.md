@@ -98,6 +98,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - `src/components/EstadoContaBadge.tsx`: o badge **sólido** Ativo (verde escuro `success-solido`) / Bloqueada (vermelho `destructive`), único para a lista de Fichas (`contexto="lista"`), o título do detalhe (`"titulo"`) e o seletor da Nova Venda (`"seletor"`, só aparece se bloqueada). Mudou o visual do estado da conta? Mude só aqui.
 - `src/components/AtrasoChip.tsx`: chip claro com relógio e "N período(s) em atraso" (nível 1 amarelo, 2 laranja, 3+ vermelho; tokens `atraso-1..3` e `atraso-N-texto` em `index.css`) e `classeLinhaAtraso(atraso)` (faixa lateral de 4px + fundo suave). Testes em `AtrasoChip.test.tsx`.
 - `src/components/FichaSelecionadaCard.tsx`: o card da etapa 2 da Nova Venda (saldo, atraso opcional, anotação, botão Trocar).
+- `src/lib/datas.ts`: `dataCurta`/`dataLonga`/`intervalo` formatam colunas DATE pelo texto (sem fuso); `dataSp`/`horaSp` formatam timestamps no fuso de São Paulo; `diaSeguinte`. Nunca use `new Date('AAAA-MM-DD')` para DATE (vira o dia anterior no Brasil).
 - `src/lib/saldo.ts` (`formatSaldo`) e `src/lib/masks.ts`: máscaras, `isCpfValido` (só conta 11 dígitos, **sem** dígito verificador) e `isTelefoneValido` (10 ou 11 dígitos; campo vazio é considerado válido).
 - Hooks em `src/hooks/`:
   - `useFichas.ts`: CRUD de fichas e `useRegistrarCompra`. `NovaFicha`/`FichaUpdate` só aceitam as colunas que o banco deixa gravar. `useDeleteFicha` usa `.select()` e falha se não apagou exatamente 1 linha.
@@ -120,10 +121,19 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
     - Clicar numa venda abre o detalhe da ficha.
     - Switch "Modo recreio": depois de cada venda, o modal volta para a busca em vez de fechar. O state vale para o modal em qualquer origem e não persiste ao recarregar.
     - Botão "Realizar Nova Venda".
+  - **Fechamento** (`fechamento`; `src/components/fechamento/AbaFechamento.tsx`). A aba mostra na nav um contador de períodos pendentes:
+    - Cabeçalho: "Próximo a fechar: período" (selo "transição" quando for o caso) e "N pendente(s)", ou o motivo de não haver o que fechar, também como tooltip do botão desabilitado.
+    - Botão "Fechar período…" (`DialogFecharPeriodo`):
+      - mostra a prévia (fichas e total de dívida congelada) e o aviso de que vendas esperam;
+      - mostra as divergências razão × saldo, com uma checkbox obrigatória;
+      - no `CF002`, reconfere e pede nova confirmação.
+    - "Em aberto": `LinhaFichaEmAberto`, com saldo ao vivo, `AtrasoChip`, faixa lateral e badge. O clique abre o detalhe.
+    - "Histórico": `HistoricoPeriodos`, em accordion, com o valor no fechamento, "quitado em" ou "em aberto" e as divergências aceitas.
+    - Props reservadas para o futuro, ainda não usadas: `extrasCabecalho`, `indicadores` e `acoesFicha`.
   - **Relatórios** (`relatorios`):
     - Cards "Fichas com Saldo Pendente" (saldo > 0) e "Total Geral a Receber". Os dois têm cursor de clique, mas não fazem nada.
     - Card "Exportar Relatório": sem ação nenhuma, nem toast.
-    - A seção "Fechamento Mensal" saiu na etapa 1. O fechamento por período ganha aba própria na etapa 2d.
+    - A seção "Fechamento Mensal" saiu na etapa 1 (o fechamento agora é a aba Fechamento).
   - **Controle** (`dashboard`):
     - Cards Total a Receber, Fichas Ativas (`!bloqueada`) e "+ Nova Venda".
     - Busca Rápida: o clique abre a **Nova Venda** já com a ficha selecionada.
@@ -160,7 +170,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   - Qualquer pessoa numa rede que alcance esta máquina (Wi-Fi, hotspot, VPN) e abra `http://<ip>:8080` entra direto com sessão de admin.
   - A senha do admin (`VITE_DEV_ADMIN_PASSWORD`) vai no JS servido a esse navegador.
   - A senha antiga continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita.
-- **Fechamento ainda sem tela:** o banco já tem o fechamento por período (etapa 1), mas a aba Fechamento, o atraso nas telas e a tela de Configurações só chegam nas etapas 2a–2f.
+- **Fechamento incompleto na UI:** a aba Fechamento existe (2d), mas o atraso nas telas de Fichas e Nova Venda (2e) e a tela de Configurações (2f) ainda não.
 - **Fuso horário:** `mes_referencia` usa `toISOString()` (UTC), então uma venda depois das 21h do último dia do mês ganha o rótulo do mês seguinte. É só rótulo: o fechamento usa `data` no fuso de São Paulo. O faturamento do dia usa o dia local.
 - **Não há estorno nem correção pela UI:** não existe como excluir ou editar uma venda ou um pagamento, e nem a API permite (só as RPCs escrevem no razão). Correção é manual, via SQL Editor, mantendo razão e saldo iguais.
 - **Travas só no client:** `bloqueada` e `somente_credito` não são validadas nas RPCs. O teste de crédito usa um snapshot da ficha selecionada.
@@ -169,7 +179,8 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - **"Maiores Saldos Pendentes"** pode listar fichas zeradas ou com crédito, em vermelho, quando há menos de 3 devedores.
 - **Performance:** `useVendas` traz todas as compras, sujeito ao limite padrão de linhas do PostgREST, a cada venda.
 - **Formulários:** o modo Editar não valida nome vazio e mostra Responsável 2 para conta independente. O "Cancelar" da Nova Ficha não limpa o formulário.
-- **Atalho de espaço:** dispara mesmo com foco num botão ou switch, roubando o clique.
+- **Atalho de espaço:** dispara mesmo com foco num botão ou switch fora de dialog, roubando o clique. Com qualquer dialog aberto (`[role=dialog][data-state=open]`), não dispara.
+- **Nav em tela estreita:** com 6 abas, a barra rola na horizontal abaixo de ~760px de largura.
 - **Mocks e placeholders:** Verificar devedores, Gerar relatório, Cadastrar produto e Exportar Relatório.
 - **Sem multi-tenant:** a RLS não tem escopo por usuário ou cantina.
 - **Dívida de docs e projeto:** o `README.md` está desatualizado (diz que o `.env` já vem com as credenciais), `NavLink.tsx` e `App.css` são código morto, só a validação do ambiente e o SQL têm testes (as telas não) e o TypeScript roda em modo não estrito.

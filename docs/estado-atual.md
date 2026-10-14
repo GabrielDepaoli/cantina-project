@@ -60,15 +60,34 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - simulação do dia 20 bloqueada por 4 pendentes.
 - **Também:** 51 testes passando, `tsc` limpo e app abrindo sem erro no console.
 
+## Etapa 2d — Aba Fechamento: concluída (14/10)
+
+- **Arquivos:**
+  - `src/components/fechamento/` com `AbaFechamento`, `DialogFecharPeriodo`, `LinhaFichaEmAberto`, `HistoricoPeriodos` e `SeloTransicao`;
+  - `src/lib/datas.ts`, com 3 testes;
+  - aba e contador de pendentes na nav;
+  - atalho de espaço ignorado com qualquer dialog aberto.
+- **Testado no navegador, contra o banco de desenvolvimento:**
+  - os 4 períodos do seed fechados pelo botão, um por clique;
+  - prévias de 3, 2, 5 e 6 fichas;
+  - atrasos finais iguais à tabela do LEIAME (903: 1; 904, 907 e 908: 2; 905 e 906: 4);
+  - a 908 nasceu quitada em 07/07/2026;
+  - pagamento de R$ 64 na 903 tirou a ficha de "Em aberto" na hora;
+  - excluir a 905 foi recusado com a mensagem do banco;
+  - botão desabilitado com o motivo e o contador da nav sumindo quando zera;
+  - 0 divergências no fim.
+- **54 testes passando e `tsc` limpo.**
+- **Estado do banco agora:** 4 períodos fechados e a 903 quitada. Para voltar ao início (4 pendentes), rode `supabase/desenvolvimento/seed.sql`.
+
 ## Próxima etapa
 
-- **2d** — aba **Fechamento**: próximo a fechar e pendentes, botão com prévia e divergências, lista "Em aberto", histórico e badge de pendência na nav. É aqui que você fecha os 4 períodos do seed pelo botão. Ela só começa quando você pedir.
+- **2e** — atraso nas telas existentes: faixa e chip na lista de Fichas, chip no título do detalhe e chip na etapa 2 da Nova Venda. A etapa 1 continua sem atraso.
 
 ## Git
 
 - **Branch:** `feature/account-closing`.
-- **Último commit:** `10ed32d feat: solid account status badge and overdue chip building blocks` (etapa 2b). `723ead3` (A, 1 e 2a) já está no remoto; `10ed32d` ainda não foi enviado.
-- **Pendente de commit:** etapa 2c, este arquivo e o `CLAUDE.md`.
+- **Commits locais ainda não enviados:** `10ed32d` (2b), `9a8ddf0` (2c) e o da 2d. `723ead3` (A, 1 e 2a) já está no remoto.
+- **Combinado (14/10):** commit ao fim de cada sub-etapa da 2; push só depois da sua confirmação, ao terminar a 2.
 
 ## Decisões em aberto
 

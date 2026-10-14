@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote } from "lucide-react";
+import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +16,13 @@ import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
+import AbaFechamento from "@/components/fechamento/AbaFechamento";
+import { useProximosPeriodos } from "@/hooks/useFechamentos";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
 
-type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
+type View = "menu" | "dashboard" | "fichas" | "compra" | "fechamento" | "relatorios";
 
 const Index = () => {
   const { toast } = useToast();
@@ -31,6 +33,7 @@ const Index = () => {
   const createFicha = useCreateFicha();
   const { data: faturamentoDia = 0 } = useFaturamentoDia();
   const { data: vendas = [] } = useVendas();
+  const { pendentes: periodosPendentes } = useProximosPeriodos();
 
   const [view, setView] = useState<View>("menu");
   const [mostrarFaturamento, setMostrarFaturamento] = useState(false);
@@ -105,7 +108,9 @@ const Index = () => {
       if (e.code !== "Space") return;
       const target = e.target as HTMLElement;
       const digitando = ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
-      if (digitando || novaVendaOpen || detalheOpen || isModalOpen) return;
+      // Qualquer dialog aberto, inclusive os de dentro das abas (ex.: fechar período).
+      const dialogAberto = document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]');
+      if (digitando || dialogAberto || novaVendaOpen || detalheOpen || isModalOpen) return;
       e.preventDefault();
       abrirNovaVenda();
     };
@@ -267,6 +272,7 @@ const Index = () => {
             { key: "menu" as View, label: "Menu", icon: MenuIcon },
             { key: "fichas" as View, label: "Fichas", icon: Users },
             { key: "compra" as View, label: "Vendas", icon: Plus },
+            { key: "fechamento" as View, label: "Fechamento", icon: CalendarCheck, contador: periodosPendentes.length },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
             { key: "dashboard" as View, label: "Controle", icon: BarChart3 },
           ].map(item => (
@@ -280,6 +286,14 @@ const Index = () => {
             >
               <item.icon className="w-4 h-4" />
               {item.label}
+              {item.contador > 0 && (
+                <span
+                  className="min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center"
+                  aria-label={`${item.contador} período(s) pendente(s) de fechamento`}
+                >
+                  {item.contador}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -712,6 +726,13 @@ const Index = () => {
                 </div>
               )}
             </div>
+          </motion.div>
+        )}
+
+        {/* FECHAMENTO */}
+        {view === "fechamento" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <AbaFechamento onAbrirFicha={f => { setDetalheFicha(f); setDetalheOpen(true); }} />
           </motion.div>
         )}
 
