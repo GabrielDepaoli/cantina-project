@@ -95,7 +95,9 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 - `src/pages/Login.tsx`: o usuário digitado vira `<usuario>@cantina.local`, com senha do Supabase Auth.
 - `src/contexts/AuthContext.tsx` + `src/components/ProtectedRoute.tsx`: o **login está desligado**. O `ProtectedRoute` retorna `children` antes de qualquer checagem, e o `AuthContext` faz login automático com `VITE_DEV_ADMIN_*` sempre que não há sessão. Isso **não** depende de `import.meta.env.DEV`. E, como a produção é o próprio `npm run dev` (ver "Produção"), as credenciais vão no JavaScript servido a qualquer navegador que abra o app.
 - `src/config/cantina.ts`: nome e proprietário exibidos no header e no login. É o ponto de entrada futuro para multi-tenant.
-- `src/components/EstadoContaBadge.tsx`: o badge Ativo/Bloqueada, único para a lista de Fichas (`contexto="lista"`), o título do detalhe (`"titulo"`) e o seletor da Nova Venda (`"seletor"`, só aparece se bloqueada, em âmbar). Mudou o visual do estado da conta? Mude só aqui.
+- `src/components/EstadoContaBadge.tsx`: o badge **sólido** Ativo (verde escuro `success-solido`) / Bloqueada (vermelho `destructive`), único para a lista de Fichas (`contexto="lista"`), o título do detalhe (`"titulo"`) e o seletor da Nova Venda (`"seletor"`, só aparece se bloqueada). Mudou o visual do estado da conta? Mude só aqui.
+- `src/components/AtrasoChip.tsx`: chip claro com relógio e "N período(s) em atraso" (nível 1 amarelo, 2 laranja, 3+ vermelho; tokens `atraso-1..3` e `atraso-N-texto` em `index.css`) e `classeLinhaAtraso(atraso)` (faixa lateral de 4px + fundo suave). Testes em `AtrasoChip.test.tsx`.
+- `src/components/FichaSelecionadaCard.tsx`: o card da etapa 2 da Nova Venda (saldo, atraso opcional, anotação, botão Trocar).
 - `src/lib/saldo.ts` (`formatSaldo`) e `src/lib/masks.ts`: máscaras, `isCpfValido` (só conta 11 dígitos, **sem** dígito verificador) e `isTelefoneValido` (10 ou 11 dígitos; campo vazio é considerado válido).
 - Hooks em `src/hooks/`:
   - `useFichas.ts`: CRUD de fichas e `useRegistrarCompra`.
@@ -109,7 +111,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
     - Card com a data de hoje.
     - 5 atalhos: Realizar uma nova venda, Cadastrar nova ficha (abre a aba Fichas com o modal aberto), e três mocks com toast: Verificar devedores, Gerar relatório e Cadastrar produto.
   - **Fichas** (`fichas`):
-    - Lista com número, nome, anotação truncada com ícone, responsável (só para dependente), saldo e badge verde **Ativo** / vermelho **Bloqueada** (derivado de `bloqueada`).
+    - Lista com número, nome, anotação truncada com ícone, responsável (só para dependente), saldo e badge sólido verde **Ativo** / vermelho **Bloqueada** (derivado de `bloqueada`).
     - A busca é por substring no número, no nome e no responsável. O state `search` é **compartilhado** com o Controle.
     - Modal "Nova Ficha": número só com dígitos, `maxLength=3`, completado com zeros, placeholder "Próx Num Livre: XXX" (o menor número livre). Switch Dependente/Independente. Validação de celular e CPF. Uma conta independente grava `nome_responsavel = "O Mesmo"`; fichas antigas podem ter `"O Próprio"`.
   - **Vendas** (`compra`; o título da tela é "Últimas Vendas"):
@@ -134,7 +136,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   - Registrar Pagamento: valor > 0 e observação opcional.
   - Extrato: compras e pagamentos, só com data, do mais recente para o mais antigo.
 - **`src/components/NovaVendaDialog.tsx`** (aberto pelo Menu, pela aba Vendas, pelo Controle e pela **barra de espaço** em qualquer lugar fora de inputs e de modais):
-  - **Etapa 1:** busca por número ou nome. Digitar um número e dar **Enter** seleciona a ficha pelo número exato completado com zeros (`1` ou `01` viram `001`); se não existir, mostra um toast. A lista mostra o badge "Bloqueada" em **âmbar** (token `warning`) e não mostra a anotação.
+  - **Etapa 1:** busca por número ou nome. Digitar um número e dar **Enter** seleciona a ficha pelo número exato completado com zeros (`1` ou `01` viram `001`); se não existir, mostra um toast. A lista mostra o badge sólido vermelho "Bloqueada" e não mostra a anotação.
   - **Etapa 2:** card com saldo, anotação em âmbar e botão "Trocar".
     - Conta bloqueada: aparece um aviso e a venda fica impedida.
     - `somente_credito`: mostra o crédito disponível e bloqueia se o valor passar dele.
@@ -144,7 +146,8 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 ## Decisões de design já fechadas (não reabrir)
 
 - **Ativar/Desativar ficha foi removido.** O estado de conta é só `bloqueada` (Trancar/Destrancar), que impede vendas novas mas permite pagamentos. A coluna `status` ficou no banco e nada a lê nem escreve (o fechamento novo inclui toda ficha devedora, bloqueada ou não).
-- **Cores:** verde (`success`) = Ativo/OK e crédito; vermelho (`destructive`) = Bloqueada e dívida; âmbar (`warning`) = avisos (trancar, anotação na venda, somente-crédito, bloqueada no seletor de venda). O laranja do app é o `primary`, não o `warning`.
+- **Cores:** verde (`success`) = Ativo/OK e crédito; vermelho (`destructive`) = Bloqueada e dívida; âmbar (`warning`) = avisos (trancar, anotação na venda, somente-crédito). O laranja do app é o `primary`, não o `warning`.
+- **Estado da conta × atraso se distinguem pela forma:** badge **sólido** = estado da conta; chip claro com relógio + faixa lateral = atraso. O texto do atraso sempre traz o número. Contraste AA conferido (≥ 4,8:1) em todos.
 - **Saldo corrente:** o pagamento abate o total da ficha e não quita uma compra específica. No fechamento, um item só é quitado quando o saldo da ficha chega a ≤ 0 (não existe quitação parcial).
 - **Anotação:** aparece na lista de Fichas e na etapa 2 da venda, mas **não** no seletor da etapa 1.
 - **Conta independente:** não exibe a linha "Responsável" em lugar nenhum.

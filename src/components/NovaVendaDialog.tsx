@@ -1,10 +1,11 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { Search, StickyNote } from "lucide-react";
+import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import EstadoContaBadge from "@/components/EstadoContaBadge";
+import FichaSelecionadaCard from "@/components/FichaSelecionadaCard";
 import { useToast } from "@/hooks/use-toast";
 import { useFichas, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { formatSaldo } from "@/lib/saldo";
@@ -159,28 +160,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
           </div>
         ) : (
           <div className="space-y-4">
-            <Card
-              className={selectedFicha.bloqueada ? "border-warning/30 bg-warning/5" : "border-primary/30 bg-primary/5"}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Ficha selecionada</p>
-                  <p className="font-bold text-foreground text-lg">#{selectedFicha.numero_ficha} — {selectedFicha.nome_aluno}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Saldo atual:{" "}
-                    <span className={`font-bold ${Number(selectedFicha.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                      {formatSaldo(Number(selectedFicha.saldo_atual))}
-                    </span>
-                  </p>
-                  {selectedFicha.observacoes && (
-                    <p className="flex items-center gap-1 text-sm text-warning mt-1">
-                      <StickyNote className="w-3.5 h-3.5 shrink-0" /> {selectedFicha.observacoes}
-                    </p>
-                  )}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>
-              </CardContent>
-            </Card>
+            <FichaSelecionadaCard ficha={selectedFicha} onTrocar={() => setSelectedFicha(null)} />
 
             {selectedFicha.bloqueada ? (
               <Card className="border-warning/30">

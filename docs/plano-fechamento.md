@@ -453,8 +453,8 @@ Pior caso na lista:
 $s = Read-Host 'Senha do banco' -AsSecureString          # rodar sozinha; não vai para o histórico
 $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
 $pg   = 'C:\Program Files\PostgreSQL\17\bin'
-$conn = 'host=aws-0-sa-east-1.pooler.supabase.com port=5432 dbname=postgres user=postgres.yqhiazfknioaxlyzobrz sslmode=require'
-$dir  = 'C:\Users\depao\Backups\cantina'                  # FORA do repositório
+$conn = 'host=<host do pooler> port=5432 dbname=postgres user=postgres.<ref> sslmode=require'
+$dir  = "$env:USERPROFILE\Backups\cantina"               # FORA do repositório
 $data = Get-Date -Format 'yyyyMMdd-HHmm'
 New-Item -ItemType Directory -Force $dir | Out-Null
 & "$pg\psql.exe" -d $conn -X -A -v ON_ERROR_STOP=1 -o "$dir\cantina-$data-contagem.txt" -c "SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY" -c "<consulta de contagem>"
@@ -464,7 +464,7 @@ Remove-Item Env:PGPASSWORD
 ```
 
 - A consulta de contagem tem uma linha por tabela, com `count(*)` e a soma dos valores.
-- O host e o usuário são os do projeto **em uso**. A ref no `user=` precisa ser a de produção.
+- `<host do pooler>` e `<ref>`: no painel do Supabase, projeto **em uso**, *Connect → Session pooler*. O host é o trecho entre o `@` e o `:5432`; a ref aparece no usuário (`postgres.<ref>`). Confira que é o projeto certo antes de rodar.
 - Acrescentar `*.dump` e `*-contagem.txt` ao `.gitignore`.
 
 ## Decisões pendentes
