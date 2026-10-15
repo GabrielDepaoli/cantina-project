@@ -2,11 +2,8 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
+// O usuário digitado no login vira <usuario>@cantina.local no Supabase Auth.
 const EMAIL_DOMAIN = "cantina.local";
-// Credenciais só do auto-login de desenvolvimento (ver bloco abaixo). Vêm do
-// .env, que não é commitado — nunca hardcode senha aqui.
-const DEV_ADMIN_EMAIL = import.meta.env.VITE_DEV_ADMIN_EMAIL as string | undefined;
-const DEV_ADMIN_PASSWORD = import.meta.env.VITE_DEV_ADMIN_PASSWORD as string | undefined;
 
 interface AuthContextType {
   user: User | null;
@@ -23,21 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      // LOGIN DESATIVADO TEMPORARIAMENTE PARA DESENVOLVIMENTO (ver ProtectedRoute.tsx).
-      // Sem isso, com a tela de login pulada, o app nunca autentica de verdade e
-      // toda escrita no banco é barrada pela RLS. Loga automaticamente nos
-      // bastidores usando as credenciais do .env (nunca hardcoded/commitadas).
-      // Para reativar o login normal: apague este bloco junto com o bypass em
-      // ProtectedRoute.tsx.
-      if (!data.session && DEV_ADMIN_EMAIL && DEV_ADMIN_PASSWORD) {
-        await supabase.auth.signInWithPassword({ email: DEV_ADMIN_EMAIL, password: DEV_ADMIN_PASSWORD });
-        const refreshed = await supabase.auth.getSession();
-        setSession(refreshed.data.session);
-        setLoading(false);
-        return;
-      }
-
+    supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
     });

@@ -13,7 +13,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 - React 18 + TypeScript + Vite 5 (porta 8080) + Tailwind 3 + shadcn-ui (Radix) + framer-motion + `@tanstack/react-query` 5.
 - **App 100% front-end**, sem servidor próprio. O **Supabase é o único backend**: Postgres, Auth, RLS e funções RPC. O cliente fica em `src/integrations/supabase/client.ts`.
-- Variáveis de ambiente (`.env`, nunca versionado; o template é `.env.example`): `VITE_SUPABASE_URL` (só a URL base, **sem** `/rest/v1/`), `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, `VITE_DEV_ADMIN_EMAIL` e `VITE_DEV_ADMIN_PASSWORD`.
+- Variáveis de ambiente (`.env`, nunca versionado; o template é `.env.example`): `VITE_SUPABASE_URL` (só a URL base, **sem** `/rest/v1/`), `VITE_SUPABASE_PUBLISHABLE_KEY` e `VITE_SUPABASE_PROJECT_ID`. **Nunca ponha senha ou segredo com prefixo `VITE_`**: no `npm run dev`, todo `VITE_*` vai no JavaScript servido ao navegador. A validação recusa abrir o app se achar um (`PASSWORD`, `SENHA`, `SECRET`, `SERVICE_ROLE`, `TOKEN` no nome).
 - **Validação do ambiente** (`src/config/ambiente.ts`). `main.tsx` valida as variáveis **antes** de carregar o app. Se algo estiver errado, mostra uma tela de erro (`src/components/ErroConfiguracao.tsx`) que diz qual variável está errada e o que fazer; não existe mais tela em branco. Regras:
   - URL e chave são obrigatórias. A URL aceita o que o `supabase-js` aceita (`http`/`https`, inclusive domínio personalizado do Supabase), mas **sem caminho**: com caminho, o `supabase-js` chamaria `.../rest/v1/rest/v1`.
   - `VITE_SUPABASE_PROJECT_ID` **ausente é tolerado**. **Presente e diferente** da ref da URL é erro.
@@ -40,7 +40,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
   3. `npm run dev`.
   4. F5 no navegador.
 - **⚠️ HMR: com o `npm run dev` do caixa rodando, tudo o que muda nesta pasta vai para o caixa NA HORA.** Isso inclui arquivo salvo, `git checkout`, `git stash` e alteração no `.env`, que faz o Vite reiniciar sozinho. **Não edite arquivos nem troque de branch nesta pasta durante o expediente.**
-- **Rede:** `vite.config.ts` usa `host: "::"`, então o caixa fica acessível pelos IPs desta máquina (rede local, hotspot e VPN), não só por `localhost`. Ver dívida técnica.
+- **Rede:** `vite.config.ts` usa `host: "localhost"` (decisão de 15/10/2026): só este computador abre o caixa. Nenhum outro aparelho da rede (Wi-Fi, hotspot, VPN) acessa. Se um dia for preciso abrir em tablet ou celular, isso é uma decisão nova de segurança, não uma troca de configuração.
 
 ## Convenções inegociáveis
 
@@ -94,7 +94,8 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 - `src/App.tsx`: rotas `/login`, `/` (Index, dentro do `ProtectedRoute`) e `*`.
 - `src/pages/Login.tsx`: o usuário digitado vira `<usuario>@cantina.local`, com senha do Supabase Auth.
-- `src/contexts/AuthContext.tsx` + `src/components/ProtectedRoute.tsx`: o **login está desligado**. O `ProtectedRoute` retorna `children` antes de qualquer checagem, e o `AuthContext` faz login automático com `VITE_DEV_ADMIN_*` sempre que não há sessão. Isso **não** depende de `import.meta.env.DEV`. E, como a produção é o próprio `npm run dev` (ver "Produção"), as credenciais vão no JavaScript servido a qualquer navegador que abra o app.
+- `src/contexts/AuthContext.tsx` + `src/components/ProtectedRoute.tsx`: **login obrigatório**. Sem sessão, o `ProtectedRoute` manda para `/login`. Não existe auto-login. A sessão fica em `sessionStorage` (`src/integrations/supabase/client.ts`): F5 mantém o login; fechar a aba ou o navegador exige login de novo (decisão de 15/10/2026: login a cada abertura). Abrir o app em outra aba também pede login.
+- **Supabase Auth:** um usuário só, `admin@cantina.local`. O cadastro de novos usuários ("Allow new users to sign up") tem que ficar **desligado**: a chave pública está no repositório, e com cadastro aberto qualquer pessoa criaria uma conta `authenticated` e leria as fichas.
 - `src/config/cantina.ts`: nome e proprietário exibidos no header e no login. É o ponto de entrada futuro para multi-tenant.
 - `src/components/EstadoContaBadge.tsx`: o badge **sólido** Ativo (verde escuro `success-solido`) / Bloqueada (vermelho `destructive`), único para a lista de Fichas (`contexto="lista"`), o título do detalhe (`"titulo"`) e o seletor da Nova Venda (`"seletor"`, só aparece se bloqueada). Mudou o visual do estado da conta? Mude só aqui.
 - `src/components/AtrasoChip.tsx`: chip claro com relógio e "N período(s) em atraso" (nível 1 amarelo, 2 laranja, 3+ vermelho; tokens `atraso-1..3` e `atraso-N-texto` em `index.css`) e `classeLinhaAtraso(atraso)` (faixa lateral de 4px + fundo suave). Testes em `AtrasoChip.test.tsx`.
@@ -180,10 +181,7 @@ Sistema de "fiado" (caderneta de crédito) usado no dia a dia do caixa do **Rest
 
 ## Dívida técnica conhecida
 
-- **Segurança/produção:** o caixa roda com o login desligado e o Vite escuta em todas as interfaces (`host: "::"`).
-  - Qualquer pessoa numa rede que alcance esta máquina (Wi-Fi, hotspot, VPN) e abra `http://<ip>:8080` entra direto com sessão de admin.
-  - A senha do admin (`VITE_DEV_ADMIN_PASSWORD`) vai no JS servido a esse navegador.
-  - A senha antiga continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita.
+- **Segurança:** a senha antiga do admin continua nos commits antigos do repo público. O que a neutraliza é a rotação que já foi feita. O app roda em modo de desenvolvimento do Vite (o código-fonte é servido ao navegador), aceitável só porque escuta apenas em `localhost`.
 - **Fuso horário:** `mes_referencia` usa `toISOString()` (UTC), então uma venda depois das 21h do último dia do mês ganha o rótulo do mês seguinte. É só rótulo: o fechamento usa `data` no fuso de São Paulo. O faturamento do dia usa o dia local.
 - **Não há estorno nem correção pela UI:** não existe como excluir ou editar uma venda ou um pagamento, e nem a API permite (só as RPCs escrevem no razão). Correção é manual, via SQL Editor, mantendo razão e saldo iguais.
 - **Travas só no client:** `bloqueada` e `somente_credito` não são validadas nas RPCs. O teste de crédito usa um snapshot da ficha selecionada.

@@ -114,6 +114,30 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - a aba Fechamento mostra "O período de transição 06/10–19/10 pode ser fechado a partir de 20/10/2026".
 - **Estado do banco agora:** 4 períodos fechados, dia 20 e transição aberta. Para voltar ao início, rode `supabase/desenvolvimento/seed.sql`.
 
+## Etapa 4 — Entrada em uso: em andamento (branch `feature/security-hardening`)
+
+- **PR #2** (`feature/account-closing` → `main`) mergeado em 15/10.
+- **Segurança, decidido em 15/10:**
+  - **Rede:** só este computador (`host: "localhost"`).
+  - **Login:** a cada abertura do navegador (sessão em `sessionStorage`).
+  - **Auto-login:** removido; nenhuma senha vai mais no JavaScript servido.
+- **Feito no código:**
+  - login obrigatório (`ProtectedRoute` e `AuthContext`), `sessionStorage` e `host: "localhost"`;
+  - a validação do `.env` recusa senha ou segredo com prefixo `VITE_`, com teste novo (57 testes passando);
+  - verificado: com o `.env` atual, o app para na tela de erro apontando `VITE_DEV_ADMIN_PASSWORD`, e o servidor mostra só o endereço Local.
+- **Encontrado:** "Allow new users to sign up" estava **ligado** no Supabase. A contagem confirmou só 1 usuário (`admin@cantina.local`), ou seja, ninguém usou.
+- **Resolvido em 15/10:**
+  - [x] "Allow new users to sign up" desligado e salvo; a API do Auth confirma `disable_signup: true`.
+  - [x] Senha do admin guardada por você; `VITE_DEV_ADMIN_*` apagadas do `.env`, que agora tem só as 3 variáveis do Supabase.
+  - [x] **Login verificado:**
+    - entrar com `admin` funciona e F5 mantém a sessão;
+    - uma aba nova vai para `/login`;
+    - Sair leva ao login e apaga a sessão;
+    - voltar para `/` redireciona ao login;
+    - o token antigo do `localStorage` é apagado ao abrir o app.
+  - Troca da senha do admin: você decidiu que não é necessária.
+- **Depois:** PR desta branch, `entrada-em-uso.sql` (você), dia de fechamento, checkout da `main` na pasta do caixa e o CLAUDE.md passando a "em produção".
+
 ## Etapa 3 — Rodada final de testes: concluída (15/10)
 
 - **Novos scripts:** `supabase/desenvolvimento/carga.sql` (999 fichas, ~45 mil compras, ~5 mil pagamentos) e `medir-fechamento.sql` (fecha numa transação, mede e desfaz). Os dois também têm teste automático.

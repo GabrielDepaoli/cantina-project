@@ -2,12 +2,10 @@ import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Sem sessão, manda para o login. A sessão dura só enquanto a aba estiver
+// aberta (ver src/integrations/supabase/client.ts).
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
-
-  // LOGIN DESATIVADO TEMPORARIAMENTE PARA DESENVOLVIMENTO.
-  // Para reativar: apague este bloco (volta a exigir login normalmente).
-  return <>{children}</>;
 
   if (loading) {
     return (
