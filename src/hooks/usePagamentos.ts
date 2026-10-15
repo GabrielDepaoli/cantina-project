@@ -24,6 +24,8 @@ export function useRegistrarPagamento() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["fichas"] });
       queryClient.invalidateQueries({ queryKey: ["extrato", variables.fiadorId] });
+      // Pagamento que zera o saldo quita os itens em aberto: atrasos e histórico mudam.
+      queryClient.invalidateQueries({ queryKey: ["fechamento"] });
     },
   });
 }

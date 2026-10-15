@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import EstadoContaBadge from "@/components/EstadoContaBadge";
+import AtrasoChip from "@/components/AtrasoChip";
+import { useAtrasos } from "@/hooks/useFechamentos";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateFicha, useDeleteFicha, type Ficha } from "@/hooks/useFichas";
 import { useRegistrarPagamento, useExtrato } from "@/hooks/usePagamentos";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
+import { mensagemErro } from "@/lib/errosBanco";
 
 interface FichaDetalheDialogProps {
   ficha: Ficha | null;
@@ -24,6 +28,7 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
   const deleteFicha = useDeleteFicha();
   const registrarPagamento = useRegistrarPagamento();
   const { data: extrato = [], isLoading: extratoLoading } = useExtrato(ficha?.id);
+  const { data: atrasos } = useAtrasos();
 
   const [editando, setEditando] = useState(false);
   const [mostrarAnotacao, setMostrarAnotacao] = useState(false);
@@ -163,8 +168,9 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
         setConfirmDeleteOpen(false);
         onOpenChange(false);
       },
-      onError: () => {
-        toast({ title: "Erro", description: "Não foi possível excluir a ficha.", variant: "destructive" });
+      onError: (erro) => {
+        // CF001: ficha com fechamento em aberto (a mensagem do banco explica).
+        toast({ title: "Erro", description: mensagemErro(erro, "Não foi possível excluir a ficha."), variant: "destructive" });
       },
     });
   };
@@ -198,9 +204,8 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded">#{ficha.numero_ficha}</span>
             {ficha.nome_aluno}
-            <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${!ficha.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-              {!ficha.bloqueada ? "Ativo" : "Bloqueada"}
-            </span>
+            <EstadoContaBadge bloqueada={ficha.bloqueada} contexto="titulo" />
+            <AtrasoChip atraso={atrasos?.get(ficha.id)?.atraso} className="font-medium" />
           </DialogTitle>
         </DialogHeader>
 
@@ -432,7 +437,8 @@ const FichaDetalheDialog = ({ ficha, open, onOpenChange }: FichaDetalheDialogPro
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Isso remove a ficha e todo o histórico de compras e pagamentos dela permanentemente. Essa ação não pode
-            ser desfeita.
+            ser desfeita. Fichas com fechamento em aberto não podem ser excluídas; os fechamentos já quitados ficam
+            no histórico com o número e o nome da ficha.
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>

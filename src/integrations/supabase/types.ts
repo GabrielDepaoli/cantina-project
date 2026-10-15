@@ -55,40 +55,108 @@ export type Database = {
           },
         ]
       }
-      fechamentos: {
+      configuracao: {
         Row: {
-          created_at: string
-          data_pagamento: string
-          fiador_id: string
-          id: string
-          mes_referencia: string
-          total: number
-          valor_pago: number
+          atualizado_em: string
+          dia_fechamento: number
+          id: boolean
         }
         Insert: {
-          created_at?: string
-          data_pagamento?: string
-          fiador_id: string
-          id?: string
-          mes_referencia: string
-          total: number
-          valor_pago?: number
+          atualizado_em?: string
+          dia_fechamento?: number
+          id?: boolean
         }
         Update: {
-          created_at?: string
-          data_pagamento?: string
-          fiador_id?: string
+          atualizado_em?: string
+          dia_fechamento?: number
+          id?: boolean
+        }
+        Relationships: []
+      }
+      configuracao_historico: {
+        Row: {
+          alterado_em: string
+          alterado_por: string | null
+          aviso_confirmado: boolean
+          dia_anterior: number
+          dia_novo: number
+          id: number
+          transicao_fim: string | null
+          transicao_inicio: string | null
+        }
+        Insert: {
+          alterado_em?: string
+          alterado_por?: string | null
+          aviso_confirmado?: boolean
+          dia_anterior: number
+          dia_novo: number
+          id?: never
+          transicao_fim?: string | null
+          transicao_inicio?: string | null
+        }
+        Update: {
+          alterado_em?: string
+          alterado_por?: string | null
+          aviso_confirmado?: boolean
+          dia_anterior?: number
+          dia_novo?: number
+          id?: never
+          transicao_fim?: string | null
+          transicao_inicio?: string | null
+        }
+        Relationships: []
+      }
+      fechamento_itens: {
+        Row: {
+          fiador_id: string | null
+          id: string
+          nome_aluno: string
+          numero_ficha: string
+          periodo_id: string
+          quitado_em: string | null
+          quitado_por_pagamento_id: string | null
+          saldo_congelado: number
+        }
+        Insert: {
+          fiador_id?: string | null
           id?: string
-          mes_referencia?: string
-          total?: number
-          valor_pago?: number
+          nome_aluno: string
+          numero_ficha: string
+          periodo_id: string
+          quitado_em?: string | null
+          quitado_por_pagamento_id?: string | null
+          saldo_congelado: number
+        }
+        Update: {
+          fiador_id?: string | null
+          id?: string
+          nome_aluno?: string
+          numero_ficha?: string
+          periodo_id?: string
+          quitado_em?: string | null
+          quitado_por_pagamento_id?: string | null
+          saldo_congelado?: number
         }
         Relationships: [
           {
-            foreignKeyName: "fechamentos_fiador_id_fkey"
+            foreignKeyName: "fechamento_itens_fiador_id_fkey"
             columns: ["fiador_id"]
             isOneToOne: false
             referencedRelation: "fiadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fechamento_itens_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "periodos_fechamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fechamento_itens_quitado_por_pagamento_id_fkey"
+            columns: ["quitado_por_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "pagamentos"
             referencedColumns: ["id"]
           },
         ]
@@ -191,16 +259,183 @@ export type Database = {
           },
         ]
       }
+      periodo_divergencias: {
+        Row: {
+          fiador_id: string | null
+          id: string
+          nome_aluno: string
+          numero_ficha: string
+          periodo_id: string
+          saldo_atual: number
+          saldo_razao: number
+        }
+        Insert: {
+          fiador_id?: string | null
+          id?: string
+          nome_aluno: string
+          numero_ficha: string
+          periodo_id: string
+          saldo_atual: number
+          saldo_razao: number
+        }
+        Update: {
+          fiador_id?: string | null
+          id?: string
+          nome_aluno?: string
+          numero_ficha?: string
+          periodo_id?: string
+          saldo_atual?: number
+          saldo_razao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodo_divergencias_fiador_id_fkey"
+            columns: ["fiador_id"]
+            isOneToOne: false
+            referencedRelation: "fiadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodo_divergencias_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "periodos_fechamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodos_fechamento: {
+        Row: {
+          data_fim: string
+          data_inicio: string
+          dia_ancora: number
+          fechado_em: string
+          fechado_por: string | null
+          id: string
+          periodo_anterior_id: string | null
+          transicao: boolean
+        }
+        Insert: {
+          data_fim: string
+          data_inicio: string
+          dia_ancora: number
+          fechado_em?: string
+          fechado_por?: string | null
+          id?: string
+          periodo_anterior_id?: string | null
+          transicao?: boolean
+        }
+        Update: {
+          data_fim?: string
+          data_inicio?: string
+          dia_ancora?: number
+          fechado_em?: string
+          fechado_por?: string | null
+          id?: string
+          periodo_anterior_id?: string | null
+          transicao?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodos_fechamento_periodo_anterior_id_fkey"
+            columns: ["periodo_anterior_id"]
+            isOneToOne: true
+            referencedRelation: "periodos_fechamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      v_atraso_fichas: {
+        Row: {
+          atraso: number | null
+          desde: string | null
+          fiador_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fechamento_itens_fiador_id_fkey"
+            columns: ["fiador_id"]
+            isOneToOne: false
+            referencedRelation: "fiadores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      fechar_mes: {
+      definir_dia_fechamento: {
         Args: {
-          p_mes_referencia: string
+          p_confirmar_aviso?: boolean
+          p_dia: number
         }
-        Returns: number
+        Returns: {
+          atualizado_em: string
+          dia_fechamento: number
+          id: boolean
+        }
+      }
+      fechar_periodo: {
+        Args: {
+          p_data_inicio: string
+          p_divergencias_confirmadas?: Json
+        }
+        Returns: {
+          data_fim: string
+          data_inicio: string
+          dia_ancora: number
+          fechado_em: string
+          fechado_por: string | null
+          id: string
+          periodo_anterior_id: string | null
+          transicao: boolean
+        }
+      }
+      previa_fechamento: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          data_fim: string
+          data_inicio: string
+          fichas: number
+          total: number
+          transicao: boolean
+        }[]
+      }
+      proximos_periodos: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          data_fim: string
+          data_inicio: string
+          ordem: number
+          pendente: boolean
+          transicao: boolean
+        }[]
+      }
+      simular_troca_dia: {
+        Args: {
+          p_dia: number
+        }
+        Returns: Json
+      }
+      transicao_aberta: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          dia_anterior: number
+          dia_novo: number
+          transicao_fim: string
+          transicao_inicio: string
+        }[]
+      }
+      verificar_divergencias: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          fiador_id: string
+          nome_aluno: string
+          numero_ficha: string
+          saldo_atual: number
+          saldo_razao: number
+        }[]
       }
       registrar_compra: {
         Args: {

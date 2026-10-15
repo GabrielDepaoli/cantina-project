@@ -1,9 +1,12 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { Search, StickyNote } from "lucide-react";
+import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import EstadoContaBadge from "@/components/EstadoContaBadge";
+import FichaSelecionadaCard from "@/components/FichaSelecionadaCard";
+import { useAtrasos } from "@/hooks/useFechamentos";
 import { useToast } from "@/hooks/use-toast";
 import { useFichas, useRegistrarCompra, type Ficha } from "@/hooks/useFichas";
 import { formatSaldo } from "@/lib/saldo";
@@ -19,6 +22,8 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
   const { toast } = useToast();
   const { data: fichas = [] } = useFichas();
   const registrarCompra = useRegistrarCompra();
+  // Atraso só na etapa 2 (ficha escolhida); a busca da etapa 1 não mostra.
+  const { data: atrasos } = useAtrasos();
 
   const [search, setSearch] = useState("");
   const [selectedFicha, setSelectedFicha] = useState<Ficha | null>(null);
@@ -146,9 +151,7 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="font-mono font-bold text-primary shrink-0">#{f.numero_ficha}</span>
                     <span className="font-medium text-foreground shrink-0">{f.nome_aluno}</span>
-                    {f.bloqueada && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning shrink-0">Bloqueada</span>
-                    )}
+                    <EstadoContaBadge bloqueada={f.bloqueada} contexto="seletor" />
                   </div>
                   <span className="text-sm text-muted-foreground">{formatSaldo(Number(f.saldo_atual))}</span>
                 </button>
@@ -160,28 +163,11 @@ const NovaVendaDialog = ({ open, onOpenChange, initialFichaId, modoRecreio }: No
           </div>
         ) : (
           <div className="space-y-4">
-            <Card
-              className={selectedFicha.bloqueada ? "border-warning/30 bg-warning/5" : "border-primary/30 bg-primary/5"}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Ficha selecionada</p>
-                  <p className="font-bold text-foreground text-lg">#{selectedFicha.numero_ficha} — {selectedFicha.nome_aluno}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Saldo atual:{" "}
-                    <span className={`font-bold ${Number(selectedFicha.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
-                      {formatSaldo(Number(selectedFicha.saldo_atual))}
-                    </span>
-                  </p>
-                  {selectedFicha.observacoes && (
-                    <p className="flex items-center gap-1 text-sm text-warning mt-1">
-                      <StickyNote className="w-3.5 h-3.5 shrink-0" /> {selectedFicha.observacoes}
-                    </p>
-                  )}
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setSelectedFicha(null)}>Trocar</Button>
-              </CardContent>
-            </Card>
+            <FichaSelecionadaCard
+              ficha={selectedFicha}
+              atraso={atrasos?.get(selectedFicha.id)?.atraso}
+              onTrocar={() => setSelectedFicha(null)}
+            />
 
             {selectedFicha.bloqueada ? (
               <Card className="border-warning/30">

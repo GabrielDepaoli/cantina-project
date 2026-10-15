@@ -49,6 +49,17 @@
     --warning-foreground: 24 10% 15%;
     --success: 160 40% 45%;
     --success-foreground: 0 0% 100%;
+    /* Verde mais escuro para o badge sólido "Ativo": texto branco com contraste AA (~6:1). */
+    --success-solido: 160 45% 30%;
+
+    /* Atraso no fechamento (1 = amarelo, 2 = laranja, 3+ = vermelho).
+       A cor forte é para faixa e fundo; o texto usa o tom escuro (contraste AA). */
+    --atraso-1: 45 93% 47%;
+    --atraso-1-texto: 32 81% 29%;
+    --atraso-2: 25 95% 53%;
+    --atraso-2-texto: 15 79% 34%;
+    --atraso-3: 0 72% 51%;
+    --atraso-3-texto: 0 74% 42%;
   }
 
   .dark {

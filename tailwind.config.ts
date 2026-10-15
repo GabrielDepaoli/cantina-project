@@ -57,6 +57,15 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          solido: "hsl(var(--success-solido))",
+        },
+        atraso: {
+          "1": "hsl(var(--atraso-1))",
+          "1-texto": "hsl(var(--atraso-1-texto))",
+          "2": "hsl(var(--atraso-2))",
+          "2-texto": "hsl(var(--atraso-2-texto))",
+          "3": "hsl(var(--atraso-3))",
+          "3-texto": "hsl(var(--atraso-3-texto))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

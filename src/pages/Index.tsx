@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote } from "lucide-react";
+import { Search, Plus, Users, UserPlus, DollarSign, FileText, BarChart3, LogOut, Menu as MenuIcon, Eye, EyeOff, ShoppingCart, AlertCircle, Package, StickyNote, CalendarCheck, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +11,21 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFichas, useCreateFicha, type Ficha } from "@/hooks/useFichas";
-import { useFechamentos, useFecharMes } from "@/hooks/useFechamentos";
 import { useFaturamentoDia } from "@/hooks/useFaturamento";
 import { useVendas } from "@/hooks/useVendas";
 import FichaDetalheDialog from "@/components/FichaDetalheDialog";
 import NovaVendaDialog from "@/components/NovaVendaDialog";
+import EstadoContaBadge from "@/components/EstadoContaBadge";
+import AbaFechamento from "@/components/fechamento/AbaFechamento";
+import TelaConfiguracoes from "@/components/configuracoes/TelaConfiguracoes";
+import { useAtrasos, useProximosPeriodos } from "@/hooks/useFechamentos";
+import AtrasoChip, { classeLinhaAtraso } from "@/components/AtrasoChip";
+import { cn } from "@/lib/utils";
 import { formatCpf, formatTelefone, isCpfValido, isTelefoneValido } from "@/lib/masks";
 import { formatSaldo } from "@/lib/saldo";
 import { cantinaConfig } from "@/config/cantina";
 
-type View = "menu" | "dashboard" | "fichas" | "compra" | "relatorios";
+type View = "menu" | "dashboard" | "fichas" | "compra" | "fechamento" | "relatorios" | "configuracoes";
 
 const Index = () => {
   const { toast } = useToast();
@@ -29,17 +34,16 @@ const Index = () => {
 
   const { data: fichas = [], isLoading } = useFichas();
   const createFicha = useCreateFicha();
-  const { data: fechamentos = [] } = useFechamentos();
-  const fecharMes = useFecharMes();
   const { data: faturamentoDia = 0 } = useFaturamentoDia();
   const { data: vendas = [] } = useVendas();
+  const { pendentes: periodosPendentes } = useProximosPeriodos();
+  const { data: atrasos } = useAtrasos();
 
   const [view, setView] = useState<View>("menu");
   const [mostrarFaturamento, setMostrarFaturamento] = useState(false);
   const [search, setSearch] = useState("");
   const [detalheFicha, setDetalheFicha] = useState<Ficha | null>(null);
   const [detalheOpen, setDetalheOpen] = useState(false);
-  const [fecharMesOpen, setFecharMesOpen] = useState(false);
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
   const [novaVendaFichaId, setNovaVendaFichaId] = useState<string | null>(null);
   const [vendaModoRecreio, setVendaModoRecreio] = useState(false);
@@ -89,8 +93,6 @@ const Index = () => {
     navigate("/login", { replace: true });
   };
 
-  const mesAtualRef = new Date().toISOString().slice(0, 7);
-  const mesAtualNome = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const dataHoje = new Date().toLocaleDateString("pt-BR");
 
   const abrirNovaVenda = (fichaId: string | null = null) => {
@@ -110,14 +112,16 @@ const Index = () => {
       if (e.code !== "Space") return;
       const target = e.target as HTMLElement;
       const digitando = ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable;
-      if (digitando || novaVendaOpen || detalheOpen || isModalOpen || fecharMesOpen) return;
+      // Qualquer dialog aberto, inclusive os de dentro das abas (ex.: fechar período).
+      const dialogAberto = document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]');
+      if (digitando || dialogAberto || novaVendaOpen || detalheOpen || isModalOpen) return;
       e.preventDefault();
       abrirNovaVenda();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [novaVendaOpen, detalheOpen, isModalOpen, fecharMesOpen]);
+  }, [novaVendaOpen, detalheOpen, isModalOpen]);
 
   const handleAtalhoMock = (label: string) => {
     toast({ title: label, description: "Essa funcionalidade ainda vai ser desenvolvida." });
@@ -136,17 +140,6 @@ const Index = () => {
     { label: "Cadastrar produto", icon: Package, onClick: () => handleAtalhoMock("Cadastrar produto") },
   ];
 
-  const handleFecharMes = () => {
-    fecharMes.mutate(mesAtualRef, {
-      onSuccess: (count) => {
-        toast({ title: "Mês fechado!", description: `${count} ficha(s) processada(s).` });
-        setFecharMesOpen(false);
-      },
-      onError: () => {
-        toast({ title: "Erro", description: "Não foi possível fechar o mês.", variant: "destructive" });
-      },
-    });
-  };
 
   const handleCriarFicha = () => {
     // Validar Número (3 dígitos)
@@ -270,9 +263,21 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">{cantinaConfig.proprietario}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-1" /> Sair
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={view === "configuracoes" ? "text-primary" : "text-muted-foreground"}
+              onClick={() => setView("configuracoes")}
+              aria-label="Configurações"
+              title="Configurações"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-1" /> Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -283,6 +288,7 @@ const Index = () => {
             { key: "menu" as View, label: "Menu", icon: MenuIcon },
             { key: "fichas" as View, label: "Fichas", icon: Users },
             { key: "compra" as View, label: "Vendas", icon: Plus },
+            { key: "fechamento" as View, label: "Fechamento", icon: CalendarCheck, contador: periodosPendentes.length },
             { key: "relatorios" as View, label: "Relatórios", icon: FileText },
             { key: "dashboard" as View, label: "Controle", icon: BarChart3 },
           ].map(item => (
@@ -296,6 +302,14 @@ const Index = () => {
             >
               <item.icon className="w-4 h-4" />
               {item.label}
+              {item.contador > 0 && (
+                <span
+                  className="min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center"
+                  aria-label={`${item.contador} período(s) pendente(s) de fechamento`}
+                >
+                  {item.contador}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -634,7 +648,7 @@ const Index = () => {
               {filteredFichas.map(f => (
                 <Card
                   key={f.id}
-                  className="hover:shadow-sm transition-shadow cursor-pointer"
+                  className={cn("hover:shadow-sm transition-shadow cursor-pointer", classeLinhaAtraso(atrasos?.get(f.id)?.atraso))}
                   onClick={() => { setDetalheFicha(f); setDetalheOpen(true); }}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
@@ -655,15 +669,18 @@ const Index = () => {
                         {f.tipo === "dependente" && (
                           <p className="text-sm text-muted-foreground">Responsável: {f.nome_responsavel}</p>
                         )}
+                        {atrasos?.has(f.id) && (
+                          <div className="mt-1">
+                            <AtrasoChip atraso={atrasos.get(f.id)!.atraso} />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${Number(f.saldo_atual) > 0 ? "text-destructive" : "text-success"}`}>
                         {formatSaldo(Number(f.saldo_atual))}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${!f.bloqueada ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                        {!f.bloqueada ? "Ativo" : "Bloqueada"}
-                      </span>
+                      <EstadoContaBadge bloqueada={f.bloqueada} />
                     </div>
                   </CardContent>
                 </Card>
@@ -733,6 +750,20 @@ const Index = () => {
           </motion.div>
         )}
 
+        {/* FECHAMENTO */}
+        {view === "fechamento" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <AbaFechamento onAbrirFicha={f => { setDetalheFicha(f); setDetalheOpen(true); }} />
+          </motion.div>
+        )}
+
+        {/* CONFIGURAÇÕES */}
+        {view === "configuracoes" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <TelaConfiguracoes onIrParaFechamento={() => setView("fechamento")} />
+          </motion.div>
+        )}
+
         {/* RELATÓRIOS */}
         {view === "relatorios" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -761,59 +792,6 @@ const Index = () => {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-base">Fechamento Mensal</CardTitle>
-                <Dialog open={fecharMesOpen} onOpenChange={setFecharMesOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                      <BarChart3 className="w-4 h-4 mr-2" /> Fechar Mês Atual
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle className="capitalize">Fechar {mesAtualNome}?</DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground">
-                      Isso arquiva as compras em aberto deste mês de todas as fichas ativas, registrando quanto era
-                      devido e quanto já foi pago (via pagamentos avulsos registrados durante o mês). Fichas sem
-                      compras neste mês não são afetadas. O saldo em aberto continua normalmente na ficha.
-                    </p>
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" onClick={() => setFecharMesOpen(false)}>Cancelar</Button>
-                      <Button
-                        onClick={handleFecharMes}
-                        disabled={fecharMes.isPending}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        {fecharMes.isPending ? "Fechando..." : "Confirmar"}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {fechamentos.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum fechamento registrado ainda.</p>
-                )}
-                {fechamentos.map(f => (
-                  <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {f.ficha ? `#${f.ficha.numero_ficha} — ${f.ficha.nome_aluno}` : "Ficha removida"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{f.mes_referencia}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Devido: R$ {Number(f.total).toFixed(2)}</p>
-                      <p className={`text-sm font-semibold ${Number(f.valor_pago) >= Number(f.total) ? "text-success" : "text-destructive"}`}>
-                        Pago: R$ {Number(f.valor_pago).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           </motion.div>
         )}
       </main>

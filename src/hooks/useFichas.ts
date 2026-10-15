@@ -3,10 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Ficha = Tables<"fiadores">;
-export type NovaFicha = TablesInsert<"fiadores">;
-export type FichaUpdate = TablesUpdate<"fiadores">;
+
+// Só as colunas que o banco deixa o app gravar direto (GRANT por coluna na
+// migration do fechamento). saldo_atual muda apenas pelas RPCs.
+type ColunaEditavel =
+  | "nome_aluno" | "nome_responsavel" | "resp1_celular" | "resp1_cpf" | "resp2_nome"
+  | "resp2_celular" | "resp2_cpf" | "observacoes" | "bloqueada" | "somente_credito";
+export type NovaFicha = Pick<TablesInsert<"fiadores">, ColunaEditavel | "numero_ficha" | "tipo">;
+export type FichaUpdate = Pick<TablesUpdate<"fiadores">, ColunaEditavel>;
 
 const FICHAS_QUERY_KEY = ["fichas"] as const;
+const FECHAMENTO_QUERY_KEY = ["fechamento"] as const; // ver useFechamentos.ts
 
 export function useFichas() {
   return useQuery({
@@ -68,12 +75,17 @@ export function useDeleteFicha() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Ficha com fechamento em aberto: o banco recusa com o código CF001 (use
+    // mensagemErro). Com .select(), uma exclusão barrada em silêncio (zero
+    // linhas, sem erro) vira erro aqui em vez de parecer que deu certo.
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("fiadores").delete().eq("id", id);
+      const { data, error } = await supabase.from("fiadores").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (data?.length !== 1) throw new Error("A ficha não foi excluída.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FICHAS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: FECHAMENTO_QUERY_KEY });
     },
   });
 }
@@ -106,6 +118,8 @@ export function useRegistrarCompra() {
       queryClient.invalidateQueries({ queryKey: ["vendas"] });
       queryClient.invalidateQueries({ queryKey: ["faturamento-dia"] });
       queryClient.invalidateQueries({ queryKey: ["extrato", variables.fiadorId] });
+      // Compra muda a prévia do fechamento e pode mudar o primeiro período.
+      queryClient.invalidateQueries({ queryKey: FECHAMENTO_QUERY_KEY });
     },
   });
 }
