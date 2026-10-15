@@ -32,7 +32,12 @@ export interface EnvEntrada {
   VITE_SUPABASE_URL?: string;
   VITE_SUPABASE_PUBLISHABLE_KEY?: string;
   VITE_SUPABASE_PROJECT_ID?: string;
+  [outra: string]: unknown; // o resto de import.meta.env (conferido abaixo)
 }
+
+// No `npm run dev`, toda variável VITE_* vai no JavaScript servido ao
+// navegador. Senha ou segredo com esse prefixo seria entregue a quem abrir o app.
+const NOME_DE_SEGREDO = /^VITE_.*(PASSWORD|SENHA|SECRET|SEGREDO|SERVICE_ROLE|TOKEN)/i;
 
 const ONDE_CONFIGURAR = "Corrija no arquivo .env, na pasta do projeto, e reinicie o npm run dev.";
 
@@ -95,6 +100,16 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
     }
   }
 
+  for (const [nome, valor] of Object.entries(env)) {
+    if (NOME_DE_SEGREDO.test(nome) && typeof valor === "string" && valor.trim() !== "") {
+      erros.push({
+        variavel: nome,
+        problema: "Parece ser uma senha ou segredo, e toda variável VITE_* é enviada ao navegador de quem abre o app.",
+        comoCorrigir: `Apague essa linha do .env (guarde a senha num gerenciador de senhas) e reinicie o npm run dev. O login é feito na tela de login.`,
+      });
+    }
+  }
+
   if (refDaUrl && projectId && refDaUrl !== projectId) {
     erros.push({
       variavel: "VITE_SUPABASE_PROJECT_ID",
@@ -107,9 +122,8 @@ export function validarAmbiente(env: EnvEntrada): ResultadoAmbiente {
   return { ok: true, ambiente: { url: origem, chave }, erros: [] };
 }
 
-// Cast necessário: o tipo do Vite não declara as VITE_* e EnvEntrada só tem
-// campos opcionais (o TypeScript recusa tipos sem nenhum campo em comum).
-export const resultadoAmbiente = validarAmbiente(import.meta.env as EnvEntrada);
+// Cast necessário: o tipo do Vite não declara as VITE_*.
+export const resultadoAmbiente = validarAmbiente(import.meta.env as unknown as EnvEntrada);
 
 // Para componentes do app: só são carregados depois que a validação passou
 // (ver main.tsx), então aqui o ambiente sempre existe.

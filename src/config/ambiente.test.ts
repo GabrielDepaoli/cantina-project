@@ -66,6 +66,17 @@ describe("validarAmbiente", () => {
     expect(texto(env({ VITE_SUPABASE_URL: "https://db.exemplo.com/rest/v1/" }))).toMatch(/sem \/rest\/v1\//);
   });
 
+  it("senha ou segredo com prefixo VITE_ → erro apontando a variável (iria para o navegador)", () => {
+    expect(variaveis(env({ VITE_DEV_ADMIN_PASSWORD: "x" }))).toEqual(["VITE_DEV_ADMIN_PASSWORD"]);
+    expect(variaveis(env({ VITE_SUPABASE_SERVICE_ROLE_KEY: "x" }))).toEqual(["VITE_SUPABASE_SERVICE_ROLE_KEY"]);
+    expect(texto(env({ VITE_ADMIN_SENHA: "x" }))).toMatch(/Apague essa linha do \.env/);
+    // vazia ou sem o prefixo VITE_ (não vai para o navegador) é aceita
+    expect(validarAmbiente(env({ VITE_DEV_ADMIN_PASSWORD: "" })).ok).toBe(true);
+    expect(validarAmbiente(env({ ADMIN_PASSWORD: "x" })).ok).toBe(true);
+    // e-mail não é segredo
+    expect(validarAmbiente(env({ VITE_DEV_ADMIN_EMAIL: "admin@cantina.local" })).ok).toBe(true);
+  });
+
   it("todo erro diz qual variável, qual o problema e como corrigir (.env + reiniciar)", () => {
     const r = validarAmbiente({});
     expect(r.erros.length).toBeGreaterThan(0);
