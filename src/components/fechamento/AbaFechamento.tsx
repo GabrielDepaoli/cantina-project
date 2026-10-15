@@ -37,7 +37,7 @@ const AbaFechamento = ({ onAbrirFicha, extrasCabecalho, indicadores, acoesFicha 
 
   // Por que não há o que fechar (texto visível e no tooltip do botão).
   const motivoSemFechamento = emAndamento
-    ? `Nada a fechar agora. O período ${intervalo(emAndamento.data_inicio, emAndamento.data_fim)} pode ser fechado a partir de ${dataLonga(diaSeguinte(emAndamento.data_fim))}.`
+    ? `Nada a fechar agora. O período ${emAndamento.transicao ? "de transição " : ""}${intervalo(emAndamento.data_inicio, emAndamento.data_fim)} pode ser fechado a partir de ${dataLonga(diaSeguinte(emAndamento.data_fim))}.`
     : "Nenhuma compra registrada ainda, então não há período para fechar.";
 
   const botaoFechar = (

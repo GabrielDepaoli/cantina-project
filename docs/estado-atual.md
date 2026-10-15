@@ -91,7 +91,7 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - a 907 com chip e anotação na venda.
 - **54 testes passando e `tsc` limpo.**
 
-## Etapa 2f — Configurações: código pronto, falta rodar uma migration de correção
+## Etapa 2f — Configurações: concluída (15/10)
 
 - **Tela:** `src/components/configuracoes/`, aberta pela engrenagem no header.
   - Dia de fechamento: simulação, confirmação, aviso de transição curta, bloqueios com "Ir para Fechamento" e histórico.
@@ -106,19 +106,23 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - **Correção:** migration `20261014150000_definir_dia_com_where.sql` (também na seção 7 do setup).
   - **Novo teste:** confere que nenhuma função tem UPDATE/DELETE sem WHERE.
   - 55 testes passando.
-- **Para você fazer:**
-  - [ ] Rodar `supabase/migrations/20261014150000_definir_dia_com_where.sql` no SQL Editor.
-  - Depois disso eu testo a troca de dia de verdade (dia 20 → bloqueio da segunda troca).
+- Migration de correção rodada no banco em 15/10 e conferida (`prosrc` com `WHERE id`).
+- **Troca real testada no navegador** (15/10, depois de rodar o seed e fechar de novo os 4 períodos pelo botão):
+  - com pendentes: campo desabilitado, lista dos 4 períodos e "Ir para Fechamento" funcionando;
+  - troca 6 → 20 deu certo: transição 06/10–19/10 no histórico;
+  - segunda troca bloqueada na tela e na API (`CF009`, mensagem da regra 12);
+  - a aba Fechamento mostra "O período de transição 06/10–19/10 pode ser fechado a partir de 20/10/2026".
+- **Estado do banco agora:** 4 períodos fechados, dia 20 e transição aberta. Para voltar ao início, rode `supabase/desenvolvimento/seed.sql`.
 
-## Etapa 2 — resumo
+## Etapa 2 — concluída (15/10)
 
-- 2a a 2f prontas. Falta só confirmar a troca de dia depois da migration de correção.
-- **Próxima depois da 2:** etapa **3**, rodada final de testes.
+- 2a a 2f prontas e testadas no navegador contra o banco de desenvolvimento.
+- **Próxima:** etapa **3**, rodada final de testes (seção "Testes" do plano). Depois, a etapa 4 (entrada em uso), que começa pela segurança: login e acesso pela rede.
 
 ## Git
 
 - **Branch:** `feature/account-closing`.
-- **Commits locais ainda não enviados:** `10ed32d` (2b), `9a8ddf0` (2c) e o da 2d. `723ead3` (A, 1 e 2a) já está no remoto.
+- **Commits locais ainda não enviados:** `10ed32d` (2b), `9a8ddf0` (2c), `111d701` (2d), `e37c425` (2e), `a4d05a1` (2f) e o ajuste final da 2f. `723ead3` (A, 1 e 2a) já está no remoto.
 - **Combinado (14/10):** commit ao fim de cada sub-etapa da 2; push só depois da sua confirmação, ao terminar a 2.
 
 ## Decisões em aberto
