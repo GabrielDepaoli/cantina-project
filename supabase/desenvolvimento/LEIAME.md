@@ -9,6 +9,8 @@ Todos os scripts rodam no **SQL Editor do Supabase**, por você.
 | `00-marcador.sql` | Uma vez, agora | Marca o banco como `desenvolvimento`. Sem a marca, seed e reset recusam rodar. |
 | `seed.sql` | Sempre que quiser voltar ao estado de teste | Apaga tudo e cria as fichas 901–908, com datas relativas a hoje. Mostra no fim os períodos P1–P4 calculados. |
 | `reset.sql` | Para só apagar | Apaga os dados de todas as tabelas do app e mantém a marca. |
+| `carga.sql` | Depois do seed, para testar volume | Completa as fichas até 999 e cria ~45 mil compras e ~5 mil pagamentos, sem divergência. Desfaz com o seed. |
+| `medir-fechamento.sql` | Depois da carga | Fecha o próximo período dentro de uma transação, mostra quanto tempo levou (ms) e desfaz tudo. |
 | `entrada-em-uso.sql` | **Uma vez, no dia em que o sistema entrar em uso** | Apaga os dados de teste, remove a marca e cria `_em_uso`. Exige editar uma linha de confirmação. |
 
 ## Primeira vez

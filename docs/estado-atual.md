@@ -114,10 +114,33 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - a aba Fechamento mostra "O período de transição 06/10–19/10 pode ser fechado a partir de 20/10/2026".
 - **Estado do banco agora:** 4 períodos fechados, dia 20 e transição aberta. Para voltar ao início, rode `supabase/desenvolvimento/seed.sql`.
 
+## Etapa 3 — Rodada final de testes: concluída (15/10)
+
+- **Novos scripts:** `supabase/desenvolvimento/carga.sql` (999 fichas, ~45 mil compras, ~5 mil pagamentos) e `medir-fechamento.sql` (fecha numa transação, mede e desfaz). Os dois também têm teste automático.
+- **Combinado em 15/10 e registrado no CLAUDE.md:** até a entrada em uso, o assistente roda no SQL Editor (com você logado) leitura e scripts de teste. Migrations e `entrada-em-uso.sql` continuam com você.
+- **Resultados no Supabase:**
+  - **Volume:** fechar o período mais pesado com 999 fichas (931 itens) levou **360 ms**. O limite do plano é 2.000 ms, então o aviso do diálogo continua discreto. A prévia mostrou 931 fichas e R$ 81.331,51.
+  - **Venda durante fechamento:** com todas as fichas travadas por 6 s, a venda esperou e concluiu, sem erro.
+  - **Trava de 3 s:** com uma ficha travada por 6 s, o fechamento desistiu em 3,3 s com "Há vendas ou pagamentos em andamento; tente de novo em instantes."
+  - **Divergência pela tela:**
+    - a conferência em Configurações mostrou a 902, com diferença de +R$ 2,00;
+    - o diálogo de fechar mostrou a divergência e exigiu a confirmação;
+    - mudar a divergência com a tela aberta deu "A divergência mudou", atualizou a lista para R$ 3 e desmarcou a confirmação;
+    - na segunda confirmação, fechou e registrou a divergência (902: banco 3, razão 0) no período e no histórico.
+  - **Fluxos do caixa, com as permissões novas:**
+    - criar ficha (001), editar nome e CPF, trancar e destrancar, anotar;
+    - "somente crédito" barrou a venda sem crédito;
+    - pagar R$ 20 e depois vender R$ 10 com crédito;
+    - excluir a 001;
+    - fechar o 1º período e excluir a 908, que só tinha item quitado: o histórico manteve o item como "(ficha excluída)".
+- **Estado do banco agora:** 1 período fechado, a 908 excluída e lançamentos de teste na 901. Para voltar ao início, rode `seed.sql`.
+
 ## Etapa 2 — concluída (15/10)
 
 - 2a a 2f prontas e testadas no navegador contra o banco de desenvolvimento.
-- **Próxima:** etapa **3**, rodada final de testes (seção "Testes" do plano). Depois, a etapa 4 (entrada em uso), que começa pela segurança: login e acesso pela rede.
+- **Depois da 3:**
+  1. pull request de `feature/account-closing` para a `main`;
+  2. etapa **4** (entrada em uso), numa branch nova a partir da `main`, começando pela segurança: login e acesso pela rede.
 
 ## Git
 

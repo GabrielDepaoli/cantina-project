@@ -431,6 +431,22 @@ describe("arquivos SQL do repositório", () => {
     expect(await umValor(db, "SELECT bool_and(prosecdef) FROM pg_proc WHERE proname IN ('registrar_compra','registrar_pagamento')")).toBe(true);
   }, T);
 
+  it("carga.sql completa 999 fichas sem divergência; medir-fechamento.sql mede e desfaz", async () => {
+    const db = await criarBanco();
+    await db.exec(lerSql("desenvolvimento/00-marcador.sql"));
+    await db.exec(lerSql("desenvolvimento/seed.sql"));
+    await db.exec(lerSql("desenvolvimento/carga.sql"));
+    expect(await umValor(db, "SELECT count(*)::int FROM fiadores")).toBe(999);
+    expect(await umValor(db, "SELECT count(*)::int FROM compras")).toBeGreaterThan(44_000);
+    expect(await umValor(db, "SELECT count(*)::int FROM verificar_divergencias()")).toBe(0);
+    const r = await db.exec(lerSql("desenvolvimento/medir-fechamento.sql"));
+    const medicao = r.find((x) => x.fields.some((f) => f.name === "ms"))!.rows[0] as { ms: number; itens_criados: number };
+    expect(Number(medicao.ms)).toBeGreaterThan(0);
+    expect(Number(medicao.itens_criados)).toBeGreaterThan(0);
+    expect(await umValor(db, "SELECT count(*)::int FROM periodos_fechamento")).toBe(0); // ROLLBACK
+    console.log(`fechar_periodo com 999 fichas no PGlite: ${medicao.ms} ms (só referência; o Supabase é outro motor)`);
+  }, 180_000);
+
   it("seed + fechar os 4 períodos pelo fluxo real dá os atrasos da tabela do LEIAME", async () => {
     const db = await criarBanco();
     await db.exec(lerSql("desenvolvimento/00-marcador.sql"));
