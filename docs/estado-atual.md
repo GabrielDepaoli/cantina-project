@@ -1,11 +1,28 @@
 # Estado atual — Fechamento de Contas
 
-Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fechamento.md) (v6).
+Atualizado em 15/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fechamento.md) (v6).
 
-## Premissa (v6)
+## Situação: EM USO desde 15/10/2026
 
-- **O sistema ainda não está em uso.** As fichas do banco são de teste. Nenhum dado é real.
-- **Ambiente único:** o projeto `yqhiazfknioaxlyzobrz` serve para desenvolver e testar. Na entrada em uso (etapa 4), ele é limpo e vira o banco real.
+- **Todas as etapas do plano (A, 1, 2a–2f, 3 e 4) estão concluídas.** PRs #2 (fechamento) e #3 (segurança) mergeados na `main`.
+- **Entrada em uso, feita por você no SQL Editor:**
+  - `entrada-em-uso.sql` rodado;
+  - dia de fechamento trocado para **1**;
+  - conferência: `_em_uso` criada, marca de desenvolvimento removida, 0 fichas, dia 1.
+- **Valem as regras de dados reais** (CLAUDE.md):
+  - backup antes de toda migration;
+  - fichas 997/998/999 para testes pontuais;
+  - nada de editar a pasta do caixa durante o expediente;
+  - o assistente não executa nada no banco.
+- **O caixa roda a `main`** nesta pasta (`npm run dev`, porta 8080, só `localhost`, login a cada abertura).
+
+## Decisões em aberto (depois da entrada em uso)
+
+1. **Segundo projeto Supabase** para ensaiar migrations e testar a restauração de backup. Sem ele, um backup pode ser feito, mas não testado.
+2. **Primeiro backup com dados reais:** combinar quando, depois que as fichas reais forem cadastradas. Procedimento em `docs/plano-fechamento.md`, "Backup, a partir da entrada em uso". `*.dump` e `*-contagem.txt` já estão no `.gitignore`.
+3. **Pasta de desenvolvimento separada** (`git worktree`), para não editar a pasta do caixa.
+
+## Histórico das etapas
 
 ## Concluído
 
@@ -114,7 +131,7 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   - a aba Fechamento mostra "O período de transição 06/10–19/10 pode ser fechado a partir de 20/10/2026".
 - **Estado do banco agora:** 4 períodos fechados, dia 20 e transição aberta. Para voltar ao início, rode `supabase/desenvolvimento/seed.sql`.
 
-## Etapa 4 — Entrada em uso: em andamento (branch `feature/security-hardening`)
+## Etapa 4 — Entrada em uso: concluída (15/10)
 
 - **PR #2** (`feature/account-closing` → `main`) mergeado em 15/10.
 - **Segurança, decidido em 15/10:**
@@ -136,7 +153,10 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
     - voltar para `/` redireciona ao login;
     - o token antigo do `localStorage` é apagado ao abrir o app.
   - Troca da senha do admin: você decidiu que não é necessária.
-- **Depois:** PR desta branch, `entrada-em-uso.sql` (você), dia de fechamento, checkout da `main` na pasta do caixa e o CLAUDE.md passando a "em produção".
+- PR #3 mergeado; esta pasta está na `main`.
+- `entrada-em-uso.sql` rodado por você. O bloqueio de segurança do Claude Code impediu o assistente de rodar, e isso foi respeitado.
+- Dia de fechamento trocado para 1. Conferência: `_em_uso` criada, sem marca de desenvolvimento, 0 fichas, dia 1.
+- CLAUDE.md passou a "em uso" (branch `docs/go-live`).
 
 ## Etapa 3 — Rodada final de testes: concluída (15/10)
 
@@ -166,13 +186,3 @@ Atualizado em 14/10/2026. Plano completo: [`docs/plano-fechamento.md`](plano-fec
   1. pull request de `feature/account-closing` para a `main`;
   2. etapa **4** (entrada em uso), numa branch nova a partir da `main`, começando pela segurança: login e acesso pela rede.
 
-## Git
-
-- **Branch:** `feature/account-closing`.
-- **Commits locais ainda não enviados:** `10ed32d` (2b), `9a8ddf0` (2c), `111d701` (2d), `e37c425` (2e), `a4d05a1` (2f) e o ajuste final da 2f. `723ead3` (A, 1 e 2a) já está no remoto.
-- **Combinado (14/10):** commit ao fim de cada sub-etapa da 2; push só depois da sua confirmação, ao terminar a 2.
-
-## Decisões em aberto
-
-1. Login desligado + `host: "::"`: **por último**, depois que todos os testes passarem, como primeiro passo da etapa 4 (decidido em 14/10).
-2. Pasta de desenvolvimento separada (`git worktree`): só depois da entrada em uso.
