@@ -15,6 +15,10 @@ dist-ssr
 # Environment variables (contains credentials, never commit)
 .env
 
+# Database backups (real student data, never commit)
+*.dump
+*-contagem.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
